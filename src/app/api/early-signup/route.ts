@@ -37,6 +37,24 @@ export async function POST(request: Request) {
           email: normalized,
           unsubscribed: false,
         });
+
+        // Send confirmation email when from address is set
+        if (env.RESEND_FROM_EMAIL) {
+          try {
+            await resend.emails.send({
+              from: env.RESEND_FROM_EMAIL,
+              to: normalized,
+              subject: "You're on the list — we'll be in touch",
+              html: `
+              <p>Thanks for signing up.</p>
+              <p>We'll let you know when we're up and give you your first month free.</p>
+              <p>— The Upside team</p>
+            `.trim(),
+            });
+          } catch (sendErr) {
+            console.warn("[early-signup] Resend confirmation email:", sendErr);
+          }
+        }
       } catch (resendErr) {
         // Contact may already exist; still return success
         console.warn("[early-signup] Resend contact create:", resendErr);

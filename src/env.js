@@ -13,6 +13,8 @@ export const env = createEnv({
     RESEND_API_KEY: z.string().optional(),
     /** Resend Audience ID (UUID) – required for adding contacts. Create an audience in Resend dashboard. */
     RESEND_AUDIENCE_ID: z.string().optional(),
+    /** From address for signup confirmation email (e.g. "Upside <onboarding@resend.dev>" or your verified domain). */
+    RESEND_FROM_EMAIL: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -36,6 +38,7 @@ export const env = createEnv({
     DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_AUDIENCE_ID: process.env.RESEND_AUDIENCE_ID,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     NODE_ENV: process.env.NODE_ENV,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
