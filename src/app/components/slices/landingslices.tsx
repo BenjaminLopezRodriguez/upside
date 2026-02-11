@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import EarlySignupForm from "../early-signup-form";
 import CardIssuingWidget from "../widgets/cardissuingwidget";
 import ReceiptTrackingWidget from "../widgets/receipttrackingwidget";
 import WorkflowDemoWidget from "../widgets/workflowdemowidget";
@@ -286,6 +287,30 @@ function CTA() {
   );
 }
 
+function EarlyInsiders() {
+  return (
+    <section
+      className="border-t border-border/50 bg-muted/30 px-6 py-16 sm:px-8 lg:py-20 lg:px-10"
+      aria-labelledby="early-insiders-heading"
+    >
+      <div className="mx-auto max-w-2xl text-center">
+        <h2
+          id="early-insiders-heading"
+          className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+        >
+          Early insiders
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Get notified when Upside goes live. No spam, just one email.
+        </p>
+        <div className="mx-auto mt-8 max-w-xl">
+          <EarlySignupForm />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="border-t border-border/50 bg-background px-6 py-16 sm:px-8 lg:px-10">
@@ -345,6 +370,7 @@ export default function LandingSlices() {
         <Features />
         <Benefits />
         <CTA />
+        <EarlyInsiders />
         <Footer />
       </main>
     </div>

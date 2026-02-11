@@ -1,7 +1,7 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { index, pgTableCreator } from "drizzle-orm/pg-core";
+import { index, pgTableCreator, unique } from "drizzle-orm/pg-core";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -24,3 +24,15 @@ export const posts = createTable(
   }),
   (t) => [index("name_idx").on(t.name)],
 );
+
+export const earlySignups = createTable("early_signup", (d) => ({
+  id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+  email: d.varchar({ length: 256 }).notNull(),
+  createdAt: d
+    .timestamp({ withTimezone: true })
+    .$defaultFn(() => new Date())
+    .notNull(),
+}), (t) => [
+  index("early_signup_email_idx").on(t.email),
+  unique("early_signup_email_unique").on(t.email),
+]);
