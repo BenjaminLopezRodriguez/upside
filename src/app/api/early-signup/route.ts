@@ -28,10 +28,12 @@ export async function POST(request: Request) {
       .values({ email: normalized })
       .onConflictDoNothing({ target: earlySignups.email });
 
-    if (env.RESEND_API_KEY) {
+    // Only call Resend when both API key and Audience ID are set (Audience ID is a UUID from Resend dashboard)
+    if (env.RESEND_API_KEY && env.RESEND_AUDIENCE_ID) {
       try {
         const resend = new Resend(env.RESEND_API_KEY);
         await resend.contacts.create({
+          audienceId: env.RESEND_AUDIENCE_ID,
           email: normalized,
           unsubscribed: false,
         });
