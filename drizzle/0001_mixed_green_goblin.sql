@@ -1,0 +1,1 @@
+ALTER TABLE "upside_early_signup" ADD COLUMN "freeMonthCode" varchar(32) NOT NULL DEFAULT 'LEGACY';

@@ -28,6 +28,8 @@ export const posts = createTable(
 export const earlySignups = createTable("early_signup", (d) => ({
   id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
   email: d.varchar({ length: 256 }).notNull(),
+  /** Short code for redeeming first month free (e.g. UPSIDE-A1B2C3D4). */
+  freeMonthCode: d.varchar({ length: 32 }).notNull(),
   createdAt: d
     .timestamp({ withTimezone: true })
     .$defaultFn(() => new Date())
