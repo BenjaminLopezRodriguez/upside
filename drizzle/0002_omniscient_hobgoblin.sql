@@ -1,0 +1,1 @@
+ALTER TABLE "upside_early_signup" ADD COLUMN "companyName" varchar(256);

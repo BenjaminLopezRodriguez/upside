@@ -8,6 +8,7 @@ import { env } from "@/env";
 
 const bodySchema = z.object({
   email: z.string().email("Please enter a valid email address."),
+  companyName: z.string().max(256).optional(),
 });
 
 /** Short alphanumeric code for first-month-free redemption (e.g. A1B2C3D4). */
@@ -19,7 +20,10 @@ function generateFreeMonthCode(): string {
   return `UPSIDE-${code}`;
 }
 
-function confirmationEmailHtml(code: string): string {
+function confirmationEmailHtml(code: string, companyName: string | null): string {
+  const greeting = companyName?.trim()
+    ? `Thanks for signing up, ${companyName.trim()}.`
+    : "Thanks for signing up.";
   return `
 <!DOCTYPE html>
 <html>
@@ -37,7 +41,15 @@ function confirmationEmailHtml(code: string): string {
             <td style="padding: 40px 40px 32px;">
               <p style="margin:0 0 32px; font-size: 18px; font-weight: 600; letter-spacing: -0.02em; color:#0f172a;">Upside</p>
               <h1 style="margin:0 0 12px; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color:#0f172a; line-height: 1.3;">You're on the list</h1>
-              <p style="margin:0 0 28px; font-size: 15px; line-height: 1.6; color:#475569;">We'll let you know as soon as we're live — and your first month is on us.</p>
+              <p style="margin:0 0 20px; font-size: 15px; line-height: 1.6; color:#475569;">${greeting} We'll let you know as soon as we're live — and your first month is on us.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px; background-color:#f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="padding: 20px 24px;">
+                    <p style="margin:0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color:#64748b;">What Upside does for your business</p>
+                    <p style="margin:0; font-size: 14px; line-height: 1.6; color:#334155;">Issue virtual or physical cards via API. Automatically capture and match receipts to every transaction. Give your team full control over spend so finance stays in control and audit is simple.</p>
+                  </td>
+                </tr>
+              </table>
               <p style="margin:0 0 8px; font-size: 13px; font-weight: 500; color:#64748b;">Use this code when you sign up for your free month:</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 12px 0 28px;">
                 <tr>
@@ -73,14 +85,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { email } = parsed.data;
+    const { email, companyName } = parsed.data;
 
     const normalized = email.toLowerCase().trim();
     const freeMonthCode = generateFreeMonthCode();
+    const company = companyName?.trim() || null;
 
     const inserted = await db
       .insert(earlySignups)
-      .values({ email: normalized, freeMonthCode })
+      .values({ email: normalized, companyName: company, freeMonthCode })
       .onConflictDoNothing({ target: earlySignups.email })
       .returning({ freeMonthCode: earlySignups.freeMonthCode });
 
@@ -104,7 +117,7 @@ export async function POST(request: Request) {
               from: env.RESEND_FROM_EMAIL,
               to: normalized,
               subject: "You're on the list — here's your code for a free month",
-              html: confirmationEmailHtml(codeToSend),
+              html: confirmationEmailHtml(codeToSend, company),
             });
           } catch (sendErr) {
             console.warn("[early-signup] Resend confirmation email:", sendErr);
