@@ -41,9 +41,9 @@ export default function EarlySignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-center">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:max-w-md sm:flex-row">
           <label htmlFor="early-signup-company" className="sr-only">
             Company name
           </label>
@@ -54,7 +54,7 @@ export default function EarlySignupForm() {
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             disabled={status === "loading"}
-            className="min-w-0 rounded-md border-2 bg-background sm:max-w-[200px]"
+            className="tap-target min-h-[48px] min-w-0 rounded-full border-2 border-border bg-background px-5 py-2.5 sm:max-w-[180px]"
             autoComplete="organization"
           />
           <label htmlFor="early-signup-email" className="sr-only">
@@ -67,17 +67,18 @@ export default function EarlySignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={status === "loading"}
-            className="min-w-0 rounded-md border-2 bg-background sm:max-w-[280px]"
+            className="tap-target min-h-[48px] min-w-0 flex-1 rounded-full border-2 border-border bg-background px-5 py-2.5"
             autoComplete="email"
             required
+            aria-required="true"
           />
         </div>
         <Button
           type="submit"
           disabled={status === "loading"}
-          className="shrink-0 rounded-md bg-primary px-6 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring"
+          className="tap-target shrink-0 min-h-[48px] rounded-full bg-[var(--upside-purple)] px-6 font-medium text-white transition-colors hover:bg-[var(--upside-deep)] focus-visible:ring-2 focus-visible:ring-[var(--upside-purple)] focus-visible:ring-offset-2"
         >
-          {status === "loading" ? "Joining…" : "Notify me when we're live"}
+          {status === "loading" ? "Joining…" : "Notify me"}
         </Button>
       </div>
       {message && (

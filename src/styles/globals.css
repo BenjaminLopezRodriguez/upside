@@ -8,27 +8,29 @@
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-mono), ui-monospace, "Cascadia Code", "Fira Code", monospace;
 }
 
 :root {
+  /* Material 3 + WCAG AA contrast (4.5:1 body, 3:1 UI) */
   --background: oklch(0.99 0.002 90);
-  --foreground: oklch(0.15 0.04 285);
+  --foreground: oklch(0.18 0.04 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.04 285);
+  --card-foreground: oklch(0.18 0.04 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.04 285);
-  --primary: oklch(0.25 0.06 285);
+  --popover-foreground: oklch(0.18 0.04 265);
+  --primary: oklch(0.28 0.08 265);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.92 0.03 290);
-  --secondary-foreground: oklch(0.25 0.06 285);
-  --muted: oklch(0.95 0.01 290);
-  --muted-foreground: oklch(0.45 0.03 285);
-  --accent: oklch(0.88 0.04 290);
-  --accent-foreground: oklch(0.25 0.06 285);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.90 0.015 290);
-  --input: oklch(0.90 0.015 290);
-  --ring: oklch(0.55 0.06 285);
+  --secondary: oklch(0.94 0.02 265);
+  --secondary-foreground: oklch(0.28 0.08 265);
+  --muted: oklch(0.96 0.01 265);
+  --muted-foreground: oklch(0.38 0.03 265);
+  --accent: oklch(0.90 0.03 265);
+  --accent-foreground: oklch(0.28 0.08 265);
+  --destructive: oklch(0.55 0.22 27);
+  --border: oklch(0.88 0.02 265);
+  --input: oklch(0.88 0.02 265);
+  --ring: oklch(0.45 0.12 265);
   --chart-1: oklch(0.809 0.105 251.813);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
@@ -51,13 +53,25 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Upside brand */
+  /* Upside brand — tech purple palette */
   --upside-deep: #1e1245;
   --upside-purple: #2a1f5e;
   --upside-lavender: #d5cce6;
   --upside-lavender-light: #e8e2f0;
-  --upside-gold: #c49a3c;
-  --upside-gold-light: #dbb668;
+  --upside-accent: #2a1f5e;
+  --upside-accent-hover: #1e1245;
+  --upside-surface: #f8f6fc;
+  --upside-surface-container: #e8e2f0;
+  --upside-border: #d5cce6;
+  --upside-muted: #5c4d7a;
+  /* Dark surface text — WCAG AA (4.5:1) */
+  --upside-on-dark: #f8fafc;
+  --upside-on-dark-muted: #cbd5e1;
+  --upside-on-dark-subtle: #94a3b8;
+  /* M3 elevation */
+  --elevation-1: 0 1px 2px oklch(0 0 0 / 0.05), 0 1px 3px oklch(0 0 0 / 0.08);
+  --elevation-2: 0 2px 6px oklch(0 0 0 / 0.07), 0 4px 12px oklch(0 0 0 / 0.06);
+  --elevation-3: 0 4px 12px oklch(0 0 0 / 0.08), 0 8px 24px oklch(0 0 0 / 0.06);
 }
 
 .dark {
@@ -136,7 +150,7 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/* Hero background — artistic currency-inspired gradient */
+/* Hero — currency-inspired teal-to-purple gradient */
 .hero-bg {
   background: linear-gradient(
     to bottom,
@@ -146,7 +160,7 @@
   );
 }
 
-/* Subtle engraving line pattern overlay */
+/* Subtle engraving pattern overlay */
 .hero-pattern {
   background-image: repeating-linear-gradient(
       0deg,
@@ -164,45 +178,27 @@
     );
 }
 
-/* Font utility */
+/* Subtle grid — tech aesthetic */
+.tech-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* Divider line */
+.divider-line {
+  height: 1px;
+  background: var(--upside-lavender);
+}
+
+/* Font utilities */
 .font-serif {
   font-family: var(--font-playfair), Georgia, "Times New Roman", serif;
 }
 
-/* Gold line accent */
-.gold-line {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--upside-gold) 20%,
-    var(--upside-gold) 80%,
-    transparent
-  );
-}
-
-/* Engraving texture for sections */
-.engraving-texture {
-  background-image: repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 1px,
-      rgba(42, 31, 94, 0.015) 1px,
-      rgba(42, 31, 94, 0.015) 2px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 1px,
-      rgba(42, 31, 94, 0.01) 1px,
-      rgba(42, 31, 94, 0.01) 2px
-    );
-}
-
-/* Parallax wrapper */
-.parallax-container {
-  perspective: 1000px;
-  perspective-origin: center;
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
 @keyframes workflow-cursor-move {
@@ -291,5 +287,20 @@
   a:focus-visible,
   button:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  /* Material 3: min 44px tap targets */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

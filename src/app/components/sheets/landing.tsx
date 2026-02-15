@@ -1,9 +1,5 @@
-import LandingSlices from "../slices/landingslices";
+import LandingSlices from "../slices/landing";
 
 export default function LandingSheet() {
-    return (
-        <div>
-            <LandingSlices />
-        </div>
-    )
+  return <LandingSlices />;
 }
