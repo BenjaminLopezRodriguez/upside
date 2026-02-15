@@ -138,22 +138,12 @@
 
 /* Hero background — artistic currency-inspired gradient */
 .hero-bg {
-  background: radial-gradient(
-      ellipse 80% 60% at 35% 45%,
-      #3a7a9a 0%,
-      transparent 55%
-    ),
-    radial-gradient(ellipse 70% 50% at 65% 40%, #c49a3c 0%, transparent 50%),
-    radial-gradient(ellipse 60% 70% at 50% 55%, #6a3d8a 0%, transparent 45%),
-    radial-gradient(ellipse 50% 40% at 25% 60%, #2a8a7a 0%, transparent 40%),
-    radial-gradient(ellipse 40% 35% at 75% 65%, #d4823a 0%, transparent 35%),
-    linear-gradient(
-      170deg,
-      #1a3550 0%,
-      #2d1f4e 35%,
-      #1a4060 65%,
-      #0f2030 100%
-    );
+  background: linear-gradient(
+    to bottom,
+    #1a3550 0%,
+    #2d1f4e 50%,
+    #0f2030 100%
+  );
 }
 
 /* Subtle engraving line pattern overlay */

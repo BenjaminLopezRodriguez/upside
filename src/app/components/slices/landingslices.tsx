@@ -360,15 +360,6 @@ function Nav() {
               </Link>
             ))}
           </nav>
-
-          <DemoDialog>
-            <Button
-              size="sm"
-              className="ml-2 rounded-full bg-white px-5 text-xs font-semibold text-[var(--upside-deep)] shadow-lg transition-all hover:bg-white/90 hover:shadow-xl"
-            >
-              Request demo
-            </Button>
-          </DemoDialog>
         </div>
       </div>
     </header>
@@ -525,18 +516,7 @@ function Hero() {
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40" />
 
-      {/* Faint watermark */}
-      <div
-        className="font-serif pointer-events-none absolute inset-0 flex items-start justify-start overflow-hidden select-none"
-        aria-hidden
-      >
-        <motion.span
-          className="mt-[8vh] ml-[-2vw] text-[22vw] font-bold leading-none text-white/[0.03]"
-          style={{ y: useTransform(scrollYProgress, [0, 1], ["0%", "20%"]) }}
-        >
-          upside
-        </motion.span>
-      </div>
+
 
       {/* Floating product image — parallax at different speed */}
       <motion.div
@@ -568,18 +548,7 @@ function Hero() {
         className="relative z-10 px-6 text-center"
         style={{ y: textY, opacity, scale }}
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <Badge
-            variant="outline"
-            className="mb-8 border-white/20 bg-white/5 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] text-white/70 backdrop-blur-sm"
-          >
-            Now in early access
-          </Badge>
-        </motion.div>
+
 
         <motion.h1
           className="font-serif text-[clamp(3rem,10vw,9rem)] leading-[0.92] font-bold tracking-tight text-white"
@@ -640,7 +609,7 @@ function Hero() {
       </motion.div>
 
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-22  bg-gradient-to-t from-indigo-200/40 to-transparent" />
     </section>
   );
 }
@@ -654,7 +623,7 @@ function Features() {
   return (
     <section
       id="features"
-      className="relative scroll-mt-20 px-4 pb-28 sm:px-6 lg:px-8"
+      className="relative scroll-mt-20 px-4 pb-28 sm:px-6 lg:px-8 pt-10"
       aria-labelledby="features-heading"
     >
       <div className="mx-auto max-w-6xl">
