@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TransactionsRib } from "../rib";
 import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -39,10 +47,12 @@ import { PageHeader } from "@/components/page-header";
 import { DetailRow } from "@/components/detail-row";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeftRightIcon, Download01Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeftRightIcon, Download01Icon, Refresh01Icon, Upload01Icon } from "@hugeicons/core-free-icons";
 import { downloadCsv } from "@/lib/csv";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { UploadDropzone } from "@/lib/uploadthing";
+import { api } from "@/trpc/react";
 
 const statusOptions = [
   { label: "All", value: "all" },
@@ -54,6 +64,17 @@ const statusOptions = [
 export function TransactionsView() {
   const vm = TransactionsRib.useViewModel();
   const route = TransactionsRib.useRoute("detail");
+  const [importOpen, setImportOpen] = useState(false);
+  const importFromCsv = api.transaction.importFromCsv.useMutation({
+    onSuccess: (data) => {
+      vm.refetch();
+      toast.success(`Imported ${data.imported} transaction${data.imported === 1 ? "" : "s"}`);
+      setImportOpen(false);
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
 
   return (
     <div className="animate-page-in space-y-8">
@@ -124,6 +145,14 @@ export function TransactionsView() {
               >
                 <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} data-icon="inline-start" />
                 Refresh
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} data-icon="inline-start" />
+                Import CSV
               </Button>
               <Button
                 variant="outline"
@@ -226,6 +255,33 @@ export function TransactionsView() {
           )}
         </CardContent>
       </Card>
+
+      {/* Import CSV dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="sm:max-w-md" showCloseButton={true}>
+          <DialogHeader>
+            <DialogTitle>Import transactions from CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV with columns: date, amount, merchant (or description), category, memo. Amount can be in dollars (e.g. 12.99) or cents.
+            </DialogDescription>
+          </DialogHeader>
+          <UploadDropzone
+            endpoint="transactionCsv"
+            onClientUploadComplete={(res) => {
+              const key = res[0]?.key;
+              if (key) {
+                importFromCsv.mutate({ fileKey: key });
+              }
+            }}
+            onUploadError={(err) => {
+              toast.error(err.message);
+            }}
+          />
+          {importFromCsv.isPending && (
+            <p className="text-muted-foreground text-sm">Importing transactions…</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Detail sheet */}
       <Sheet
