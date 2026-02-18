@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { and, desc, eq } from "drizzle-orm";
+
+import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
 import { bills } from "@/server/db/schema";
-import { eq, desc } from "drizzle-orm";
 
 export const billRouter = createTRPCRouter({
-  list: publicProcedure
+  list: protectedProcedureWithUser
     .input(
       z.object({
         status: z
@@ -13,21 +14,24 @@ export const billRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const where = input.status
+        ? and(eq(bills.userId, ctx.dbUser.id), eq(bills.status, input.status))
+        : eq(bills.userId, ctx.dbUser.id);
       return ctx.db.query.bills.findMany({
-        where: input.status ? eq(bills.status, input.status) : undefined,
+        where,
         orderBy: [desc(bills.dueDate)],
       });
     }),
 
-  getById: publicProcedure
+  getById: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.bills.findFirst({
-        where: eq(bills.id, input.id),
+        where: and(eq(bills.id, input.id), eq(bills.userId, ctx.dbUser.id)),
       });
     }),
 
-  create: publicProcedure
+  create: protectedProcedureWithUser
     .input(
       z.object({
         vendorName: z.string().min(1),
@@ -38,16 +42,21 @@ export const billRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const [bill] = await ctx.db.insert(bills).values(input).returning();
+      const [bill] = await ctx.db
+        .insert(bills)
+        .values({ ...input, userId: ctx.dbUser.id })
+        .returning();
       return bill;
     }),
 
-  markPaid: publicProcedure
+  markPaid: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(bills)
         .set({ status: "paid", paidAt: new Date() })
-        .where(eq(bills.id, input.id));
+        .where(
+          and(eq(bills.id, input.id), eq(bills.userId, ctx.dbUser.id)),
+        );
     }),
 });

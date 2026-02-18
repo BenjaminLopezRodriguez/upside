@@ -1,29 +1,30 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { and, eq } from "drizzle-orm";
+
+import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
 import { cards } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
 
 export const cardRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: protectedProcedureWithUser.query(async ({ ctx }) => {
     return ctx.db.query.cards.findMany({
+      where: eq(cards.userId, ctx.dbUser.id),
       with: { user: true },
       orderBy: (cards, { desc }) => [desc(cards.createdAt)],
     });
   }),
 
-  getById: publicProcedure
+  getById: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.cards.findFirst({
-        where: eq(cards.id, input.id),
+        where: and(eq(cards.id, input.id), eq(cards.userId, ctx.dbUser.id)),
         with: { user: true, transactions: { limit: 10 } },
       });
     }),
 
-  create: publicProcedure
+  create: protectedProcedureWithUser
     .input(
       z.object({
-        userId: z.number(),
         cardName: z.string().min(1),
         type: z.enum(["virtual", "physical"]),
         spendLimit: z.number().min(100),
@@ -33,26 +34,30 @@ export const cardRouter = createTRPCRouter({
       const last4 = String(Math.floor(1000 + Math.random() * 9000));
       const [card] = await ctx.db
         .insert(cards)
-        .values({ ...input, last4 })
+        .values({ ...input, userId: ctx.dbUser.id, last4 })
         .returning();
       return card;
     }),
 
-  freeze: publicProcedure
+  freeze: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(cards)
         .set({ status: "frozen" })
-        .where(eq(cards.id, input.id));
+        .where(
+          and(eq(cards.id, input.id), eq(cards.userId, ctx.dbUser.id)),
+        );
     }),
 
-  cancel: publicProcedure
+  cancel: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(cards)
         .set({ status: "cancelled" })
-        .where(eq(cards.id, input.id));
+        .where(
+          and(eq(cards.id, input.id), eq(cards.userId, ctx.dbUser.id)),
+        );
     }),
 });

@@ -45,9 +45,9 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
     api.createClient({
       links: [
         loggerLink({
+          // Only log when the server returns an error (avoids noisy "query #N" for every request)
           enabled: (op) =>
-            process.env.NODE_ENV === "development" ||
-            (op.direction === "down" && op.result instanceof Error),
+            op.direction === "down" && op.result instanceof Error,
         }),
         httpBatchStreamLink({
           transformer: SuperJSON,

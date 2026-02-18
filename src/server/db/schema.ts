@@ -1,4 +1,5 @@
-import { index, pgTableCreator, pgEnum } from "drizzle-orm/pg-core";
+import { index, pgTableCreator, pgEnum, text } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 
 /**
@@ -41,6 +42,29 @@ export const billStatusEnum = pgEnum("upside_bill_status", [
   "paid",
 ]);
 
+export const linkTypeEnum = pgEnum("upside_link_type", [
+  "receipt_scanner",
+  "order_pool",
+  "fund_request",
+]);
+
+export const linkStatusEnum = pgEnum("upside_link_status", [
+  "active",
+  "disabled",
+  "expired",
+]);
+
+export const apiKeyStatusEnum = pgEnum("upside_api_key_status", [
+  "active",
+  "revoked",
+]);
+
+export const webhookStatusEnum = pgEnum("upside_webhook_status", [
+  "active",
+  "failing",
+  "disabled",
+]);
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -49,6 +73,7 @@ export const users = createTable(
   "user",
   (d) => ({
     id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    kindeId: d.varchar({ length: 256 }).unique(),
     name: d.varchar({ length: 256 }).notNull(),
     email: d.varchar({ length: 256 }).notNull().unique(),
     role: d.varchar({ length: 64 }).notNull().default("employee"),
@@ -59,7 +84,10 @@ export const users = createTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (t) => [index("user_email_idx").on(t.email)],
+  (t) => [
+    index("user_email_idx").on(t.email),
+    index("user_kinde_id_idx").on(t.kindeId),
+  ],
 );
 
 export const cards = createTable(
@@ -151,6 +179,10 @@ export const bills = createTable(
   "bill",
   (d) => ({
     id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
     vendorName: d.varchar({ length: 256 }).notNull(),
     amount: d.integer().notNull(),
     status: billStatusEnum().notNull().default("pending"),
@@ -163,7 +195,76 @@ export const bills = createTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (t) => [index("bill_status_idx").on(t.status)],
+  (t) => [
+    index("bill_status_idx").on(t.status),
+    index("bill_user_idx").on(t.userId),
+  ],
+);
+
+export const integrationLinks = createTable(
+  "integration_link",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    name: d.varchar({ length: 256 }).notNull(),
+    type: linkTypeEnum().notNull(),
+    description: d.varchar({ length: 512 }),
+    slug: d.varchar({ length: 128 }).notNull(),
+    status: linkStatusEnum().notNull().default("active"),
+    submissions: d.integer().notNull().default(0),
+    expiresAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("integration_link_user_idx").on(t.userId),
+    index("integration_link_slug_idx").on(t.slug),
+  ],
+);
+
+export const apiKeys = createTable(
+  "api_key",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    name: d.varchar({ length: 256 }).notNull(),
+    keyPrefix: d.varchar({ length: 32 }).notNull(),
+    status: apiKeyStatusEnum().notNull().default("active"),
+    scopes: text("scopes").array().notNull().default(sql`'{}'::text[]`),
+    lastUsedAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [index("api_key_user_idx").on(t.userId)],
+);
+
+export const webhooks = createTable(
+  "webhook",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    url: d.varchar({ length: 512 }).notNull(),
+    events: text("events").array().notNull().default(sql`'{}'::text[]`),
+    status: webhookStatusEnum().notNull().default("active"),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [index("webhook_user_idx").on(t.userId)],
 );
 
 // ---------------------------------------------------------------------------
@@ -174,6 +275,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   cards: many(cards),
   transactions: many(transactions),
   reimbursements: many(reimbursements),
+  bills: many(bills),
+  integrationLinks: many(integrationLinks),
+  apiKeys: many(apiKeys),
+  webhooks: many(webhooks),
 }));
 
 export const cardsRelations = relations(cards, ({ one, many }) => ({
@@ -203,3 +308,25 @@ export const reimbursementsRelations = relations(
     }),
   }),
 );
+
+export const billsRelations = relations(bills, ({ one }) => ({
+  user: one(users, { fields: [bills.userId], references: [users.id] }),
+}));
+
+export const integrationLinksRelations = relations(
+  integrationLinks,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [integrationLinks.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, { fields: [apiKeys.userId], references: [users.id] }),
+}));
+
+export const webhooksRelations = relations(webhooks, ({ one }) => ({
+  user: one(users, { fields: [webhooks.userId], references: [users.id] }),
+}));

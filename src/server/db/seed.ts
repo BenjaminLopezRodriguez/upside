@@ -1,5 +1,3 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import {
   users,
   cards,
@@ -8,13 +6,7 @@ import {
   reimbursements,
   bills,
 } from "./schema";
-
-const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://postgres:zg2Vm2_qDiIyicDO@localhost:5432/upside";
-
-const conn = postgres(DATABASE_URL);
-const db = drizzle(conn);
+import { db } from "./index";
 
 async function seed() {
   console.log("Seeding database...");
@@ -440,11 +432,15 @@ async function seed() {
     },
   ];
 
-  const insertedBills = await db.insert(bills).values(billData).returning();
+  const insertedBills = await db
+    .insert(bills)
+    .values(
+      billData.map((b) => ({ ...b, userId: insertedUsers[0]!.id })),
+    )
+    .returning();
   console.log(`  Inserted ${insertedBills.length} bills`);
 
   console.log("Seeding complete!");
-  await conn.end();
 }
 
 function daysAgo(n: number): Date {

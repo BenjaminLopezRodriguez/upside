@@ -92,7 +92,6 @@ export const CardsRib = createRib({
     openCreate: () => state.setIsCreating(true),
     closeCreate: () => state.setIsCreating(false),
     handleCreate: (data: {
-      userId: number;
       cardName: string;
       type: "virtual" | "physical";
       spendLimit: number;

@@ -282,7 +282,6 @@ function CreateCardDialog({
   open: boolean;
   onClose: () => void;
   onCreate: (data: {
-    userId: number;
     cardName: string;
     type: "virtual" | "physical";
     spendLimit: number;
@@ -295,7 +294,6 @@ function CreateCardDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreate({
-      userId: 1,
       cardName: name,
       type,
       spendLimit: Math.round(parseFloat(limit) * 100),

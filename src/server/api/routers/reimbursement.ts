@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { and, desc, eq } from "drizzle-orm";
+
+import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
 import { reimbursements } from "@/server/db/schema";
-import { eq, desc } from "drizzle-orm";
 
 export const reimbursementRouter = createTRPCRouter({
-  list: publicProcedure
+  list: protectedProcedureWithUser
     .input(
       z.object({
         status: z
@@ -13,28 +14,34 @@ export const reimbursementRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const where = input.status
+        ? and(
+            eq(reimbursements.userId, ctx.dbUser.id),
+            eq(reimbursements.status, input.status),
+          )
+        : eq(reimbursements.userId, ctx.dbUser.id);
       return ctx.db.query.reimbursements.findMany({
-        where: input.status
-          ? eq(reimbursements.status, input.status)
-          : undefined,
+        where,
         orderBy: [desc(reimbursements.submittedAt)],
         with: { user: true },
       });
     }),
 
-  getById: publicProcedure
+  getById: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.reimbursements.findFirst({
-        where: eq(reimbursements.id, input.id),
+        where: and(
+          eq(reimbursements.id, input.id),
+          eq(reimbursements.userId, ctx.dbUser.id),
+        ),
         with: { user: true },
       });
     }),
 
-  create: publicProcedure
+  create: protectedProcedureWithUser
     .input(
       z.object({
-        userId: z.number(),
         amount: z.number().min(1),
         description: z.string().min(1),
         category: z.string().min(1),
@@ -43,26 +50,36 @@ export const reimbursementRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [reimb] = await ctx.db
         .insert(reimbursements)
-        .values(input)
+        .values({ ...input, userId: ctx.dbUser.id })
         .returning();
       return reimb;
     }),
 
-  approve: publicProcedure
+  approve: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(reimbursements)
         .set({ status: "approved", reviewedAt: new Date() })
-        .where(eq(reimbursements.id, input.id));
+        .where(
+          and(
+            eq(reimbursements.id, input.id),
+            eq(reimbursements.userId, ctx.dbUser.id),
+          ),
+        );
     }),
 
-  reject: publicProcedure
+  reject: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(reimbursements)
         .set({ status: "rejected", reviewedAt: new Date() })
-        .where(eq(reimbursements.id, input.id));
+        .where(
+          and(
+            eq(reimbursements.id, input.id),
+            eq(reimbursements.userId, ctx.dbUser.id),
+          ),
+        );
     }),
 });

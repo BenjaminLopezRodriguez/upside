@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
+
+import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
 import { transactions } from "@/server/db/schema";
-import { eq, desc, and, ilike, gte, lte, sql } from "drizzle-orm";
 
 export const transactionRouter = createTRPCRouter({
-  list: publicProcedure
+  list: protectedProcedureWithUser
     .input(
       z.object({
         status: z.enum(["pending", "completed", "declined"]).optional(),
@@ -15,7 +16,7 @@ export const transactionRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const conditions = [];
+      const conditions = [eq(transactions.userId, ctx.dbUser.id)];
       if (input.status) conditions.push(eq(transactions.status, input.status));
       if (input.category)
         conditions.push(eq(transactions.category, input.category));
@@ -27,7 +28,7 @@ export const transactionRouter = createTRPCRouter({
         conditions.push(ilike(transactions.memo, `%${input.search}%`));
 
       return ctx.db.query.transactions.findMany({
-        where: conditions.length > 0 ? and(...conditions) : undefined,
+        where: and(...conditions),
         orderBy: [desc(transactions.transactionDate)],
         with: {
           merchant: true,
@@ -37,11 +38,14 @@ export const transactionRouter = createTRPCRouter({
       });
     }),
 
-  getById: publicProcedure
+  getById: protectedProcedureWithUser
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.query.transactions.findFirst({
-        where: eq(transactions.id, input.id),
+        where: and(
+          eq(transactions.id, input.id),
+          eq(transactions.userId, ctx.dbUser.id),
+        ),
         with: {
           merchant: true,
           user: true,
@@ -50,12 +54,17 @@ export const transactionRouter = createTRPCRouter({
       });
     }),
 
-  updateMemo: publicProcedure
+  updateMemo: protectedProcedureWithUser
     .input(z.object({ id: z.number(), memo: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db
         .update(transactions)
         .set({ memo: input.memo })
-        .where(eq(transactions.id, input.id));
+        .where(
+          and(
+            eq(transactions.id, input.id),
+            eq(transactions.userId, ctx.dbUser.id),
+          ),
+        );
     }),
 });

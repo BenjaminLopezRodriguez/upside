@@ -1,15 +1,13 @@
 import Image from "next/image";
-import Link from "next/link";
+import { LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Upside — Spend smarter, grow faster",
-  description:
-    "Cards, expenses, reimbursements, and bill pay — unified for modern finance teams.",
+  title: "Sign in — Upside",
 };
 
-export default async function LandingPage() {
+export default async function SignInPage() {
   const { isAuthenticated } = getKindeServerSession();
   if (await isAuthenticated()) {
     redirect("/dashboard");
@@ -74,12 +72,9 @@ export default async function LandingPage() {
 
         {/* CTA */}
         <div className="animate-page-in stagger-3">
-          <Link
-            href="/sign-in"
-            className="inline-flex h-11 items-center justify-center rounded-4xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98]"
-          >
-            Log in
-          </Link>
+          <LoginLink className="inline-flex h-11 items-center justify-center rounded-4xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98]">
+            Sign in to Upside
+          </LoginLink>
         </div>
       </div>
     </main>

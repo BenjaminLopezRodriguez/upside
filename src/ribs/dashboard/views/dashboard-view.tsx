@@ -25,7 +25,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Empty,
@@ -49,13 +49,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
-const barChartConfig = {
-  value: {
-    label: "Spend",
-    color: "var(--chart-1)",
-  },
-} satisfies ChartConfig;
-
 const CHART_COLORS = [
   "var(--chart-1)",
   "var(--chart-2)",
@@ -63,6 +56,17 @@ const CHART_COLORS = [
   "var(--chart-4)",
   "var(--chart-5)",
 ];
+
+function buildSpendByCategoryConfig(data: { name: string; value: number }[]): ChartConfig {
+  const config: ChartConfig = {};
+  data.forEach((d, i) => {
+    config[d.name] = {
+      label: d.name,
+      color: CHART_COLORS[i % CHART_COLORS.length],
+    };
+  });
+  return config;
+}
 
 function buildPercentageLineChartConfig(
   categories: { key: string; label: string }[],
@@ -79,6 +83,7 @@ function buildPercentageLineChartConfig(
 
 export function DashboardView() {
   const vm = DashboardRib.useViewModel();
+  const spendByCategoryConfig = buildSpendByCategoryConfig(vm.chartData);
 
   if (vm.isLoading) {
     return (
@@ -131,7 +136,7 @@ export function DashboardView() {
         />
       </div>
 
-      {/* Spending by category – bar chart */}
+      {/* Spending by category – arc segment chart */}
       <Card className="transition-[box-shadow] duration-200 ease-[var(--ease-out-smooth)] hover:shadow-[0_4px_12px_0_rgb(0_0_0/0.06),0_1px_3px_0_rgb(0_0_0/0.04)] dark:hover:shadow-[0_4px_16px_0_rgb(0_0_0/0.3),0_1px_4px_0_rgb(0_0_0/0.2)]">
         <CardHeader>
           <CardTitle>Spending by Category</CardTitle>
@@ -139,13 +144,40 @@ export function DashboardView() {
         </CardHeader>
         <CardContent>
           {vm.chartData.length > 0 ? (
-            <ChartContainer config={barChartConfig} className="h-64 w-full">
-              <BarChart data={vm.chartData} layout="vertical">
-                <XAxis type="number" tickFormatter={(v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v)} />
-                <YAxis type="category" dataKey="name" width={120} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={4} />
-              </BarChart>
+            <ChartContainer config={spendByCategoryConfig} className="h-72 w-full">
+              <PieChart>
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(v) => [
+                        new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                          minimumFractionDigits: 2,
+                        }).format(Number(v)),
+                        undefined,
+                      ]}
+                    />
+                  }
+                />
+                <Pie
+                  data={vm.chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  cornerRadius={4}
+                >
+                  {vm.chartData.map((entry, index) => (
+                    <Cell
+                      key={entry.name}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+              </PieChart>
             </ChartContainer>
           ) : (
             <Empty className="py-12">

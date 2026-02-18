@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -10,7 +11,20 @@ import {
   MoneyReceiveSquareIcon,
   Invoice01Icon,
   SettingsIcon,
+  Share08Icon,
+  CodeIcon,
+  Link01Icon,
+  FlowCircleIcon,
+  ArrowDown01Icon,
+  InvoiceIcon,
+  Logout01Icon,
 } from "@hugeicons/core-free-icons";
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +37,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
@@ -33,7 +50,7 @@ const navItems = [
   {
     label: "Overview",
     items: [
-      { title: "Dashboard", href: "/", icon: DashboardSquare01Icon },
+      { title: "Dashboard", href: "/dashboard", icon: DashboardSquare01Icon },
     ],
   },
   {
@@ -52,12 +69,18 @@ const navItems = [
         icon: MoneyReceiveSquareIcon,
       },
       { title: "Bill Pay", href: "/bills", icon: Invoice01Icon },
+      { title: "Invoices", href: "/invoices", icon: InvoiceIcon },
     ],
   },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isLanding = pathname === "/";
+
+  if (isLanding) {
+    return <>{children}</>;
+  }
 
   return (
     <SidebarProvider>
@@ -67,13 +90,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             href="/"
             className="flex items-center gap-2.5 rounded-xl transition-opacity duration-200 hover:opacity-80 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
-            <div className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-[10px] text-sm font-bold shadow-[0_2px_8px_-2px_rgb(0_0_0/0.12),inset_0_1px_0_0_rgb(255_255_255/0.1)]">
-              U
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-semibold leading-tight tracking-tight">Upside</span>
-              <span className="text-[11px] text-muted-foreground leading-tight">Spend management</span>
-            </div>
+            <Image
+              src="/logo.svg"
+              alt="Upside"
+              width={108}
+              height={29}
+              className="dark:invert"
+              priority
+            />
           </Link>
         </SidebarHeader>
         <SidebarContent className="px-1">
@@ -83,10 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => {
-                    const isActive =
-                      item.href === "/"
-                        ? pathname === "/"
-                        : pathname.startsWith(item.href);
+                    const isActive = pathname.startsWith(item.href);
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
@@ -104,6 +125,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarGroupContent>
             </SidebarGroup>
           ))}
+          <SidebarGroup>
+            <SidebarGroupLabel>Integrations</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <Collapsible defaultOpen className="group/integrations">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger
+                      nativeButton={false}
+                      render={
+                        <span
+                          data-slot="sidebar-menu-button"
+                          data-sidebar="menu-button"
+                          data-size="default"
+                          data-active={pathname.startsWith("/integrations")}
+                          className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
+                          tabIndex={0}
+                          role="button"
+                        />
+                      }
+                    >
+                      <HugeiconsIcon icon={Share08Icon} strokeWidth={2} />
+                      <span>Integrations</span>
+                      <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/integrations:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            render={<Link href="/integrations/api" />}
+                            data-active={pathname.startsWith("/integrations/api")}
+                          >
+                            <HugeiconsIcon icon={CodeIcon} strokeWidth={2} />
+                            <span>API</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            render={<Link href="/integrations/link" />}
+                            data-active={pathname.startsWith("/integrations/link")}
+                          >
+                            <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
+                            <span>Link</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            render={<Link href="/integrations/automations" />}
+                            data-active={pathname.startsWith("/integrations/automations")}
+                          >
+                            <HugeiconsIcon icon={FlowCircleIcon} strokeWidth={2} />
+                            <span>Automations</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
@@ -115,6 +196,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <HugeiconsIcon icon={SettingsIcon} strokeWidth={2} />
                 <span>Settings</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<LogoutLink />}
+                tooltip="Sign out"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} />
+                <span>Sign out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

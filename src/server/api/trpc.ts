@@ -6,11 +6,14 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
+import { users } from "@/server/db/schema";
 
 /**
  * 1. CONTEXT
@@ -25,8 +28,12 @@ import { db } from "@/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const { getUser, isAuthenticated } = getKindeServerSession();
+  const [user, authenticated] = await Promise.all([getUser(), isAuthenticated()]);
+
   return {
     db,
+    user: authenticated ? user : null,
     ...opts,
   };
 };
@@ -104,3 +111,65 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+/**
+ * Protected (authenticated) procedure
+ *
+ * Throws an UNAUTHORIZED error if the user is not logged in.
+ */
+const enforceAuth = t.middleware(({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({ ctx: { user: ctx.user } });
+});
+
+/**
+ * Resolves Kinde user to our DB user (by kindeId). Creates user on first sign-in.
+ * Use this for procedures that need to scope data by userId.
+ */
+const withDbUser = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  const kindeId = ctx.user.id ?? null;
+  if (!kindeId) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Auth user has no id/sub",
+    });
+  }
+  let [dbUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.kindeId, kindeId))
+    .limit(1);
+  if (!dbUser) {
+    const name =
+      ctx.user.given_name && ctx.user.family_name
+        ? `${ctx.user.given_name} ${ctx.user.family_name}`.trim()
+        : ctx.user.given_name ?? ctx.user.family_name ?? ctx.user.email ?? "User";
+    const email = ctx.user.email ?? `${kindeId}@kinde.placeholder`;
+    const [inserted] = await db
+      .insert(users)
+      .values({
+        kindeId,
+        name,
+        email,
+      })
+      .returning();
+    dbUser = inserted!;
+  }
+  return next({
+    ctx: { user: ctx.user, dbUser },
+  });
+});
+
+export const protectedProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(enforceAuth);
+
+/** Protected procedure with DB user resolved (use for user-scoped data). */
+export const protectedProcedureWithUser = t.procedure
+  .use(timingMiddleware)
+  .use(withDbUser);
