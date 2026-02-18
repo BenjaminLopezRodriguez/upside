@@ -200,7 +200,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<LogoutLink />}
+                render={
+                  (props) => (
+                    <LogoutLink {...props}>
+                      {props.children}
+                    </LogoutLink>
+                  ) as React.ReactElement
+                }
                 tooltip="Sign out"
                 className="text-muted-foreground hover:text-foreground"
               >
