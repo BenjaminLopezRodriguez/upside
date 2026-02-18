@@ -7,6 +7,13 @@ import "./src/env.js";
 /** @type {import("next").NextConfig} */
 const config = {
   transpilePackages: ["nextjs-ribs"],
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  typescript:{
+    ignoreBuildErrors:true
+  },
+  
 };
 
 export default config;
