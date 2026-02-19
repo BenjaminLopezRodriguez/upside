@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Building01Icon, ImageUploadIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
+import { useOrg } from "@/contexts/org-context";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CompanySettingsPage() {
-  const { data: membership, isLoading } = api.organization.getMyOrg.useQuery();
-  const org = membership?.organization;
+  // Use the active org from layout context — ensures we edit the org the user
+  // is actually viewing, even if they own multiple orgs.
+  const { activeOrgId, activeMembership } = useOrg();
+  const org = activeMembership?.organization;
 
   const [name, setName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
+  // Populate form when org data arrives (or changes).
   useEffect(() => {
     if (org) {
       setName(org.name);
@@ -32,16 +36,22 @@ export default function CompanySettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    updateOrg.mutate({ name: name.trim(), logoUrl: logoUrl.trim() || undefined });
+    if (!name.trim() || activeOrgId == null) return;
+    updateOrg.mutate({
+      orgId: activeOrgId,
+      name: name.trim(),
+      logoUrl: logoUrl.trim() || undefined,
+    });
   };
+
+  const isLoading = activeOrgId == null || !activeMembership;
 
   return (
     <div className="space-y-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Company Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Update your organization's name and branding.
+          Update your organization&apos;s name and branding.
         </p>
       </div>
 
@@ -89,10 +99,7 @@ export default function CompanySettingsPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={updateOrg.isPending || !name.trim()}
-              >
+              <Button type="submit" disabled={updateOrg.isPending || !name.trim()}>
                 {updateOrg.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>

@@ -4,14 +4,21 @@
  * Kinde redirects here after successful sign-in (set KINDE_POST_LOGIN_REDIRECT_URL=/auth/resolve).
  * Resolves the user's org context and routes them to the correct destination:
  *
- *   Owner (corporate, setup pending) → /onboarding/company-setup
- *   Owner (personal or setup done)   → /dashboard
- *   Member (any role)                → /dashboard
- *   Neither                          → creates personal org → /dashboard
+ *   Has an incomplete corporate org  → /onboarding/company-setup
+ *   Has any org membership           → /dashboard
+ *   Brand-new user with no orgs      → create personal workspace → /dashboard
+ *
+ * A user can simultaneously:
+ *  - Own a personal org (always created on first sign-in)
+ *  - Own one or more corporate orgs
+ *  - Be a non-owner member of other corporate orgs
+ *
+ * We must NOT rely on findFirst(ownerId) alone — that always returns the personal
+ * org first and would skip the corporate-setup check for multi-org owners.
  */
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { users, organizations, organizationMembers } from "@/server/db/schema";
@@ -24,7 +31,7 @@ export default async function ResolvePage() {
     redirect("/sign-in");
   }
 
-  // Ensure the DB user exists (upsert on first sign-in).
+  // ── 1. Ensure DB user exists (upsert on first sign-in) ───────────────────
   let dbUser = await db.query.users.findFirst({
     where: eq(users.kindeId, kindeUser.id),
   });
@@ -42,29 +49,33 @@ export default async function ResolvePage() {
     dbUser = inserted!;
   }
 
-  // 1. Check if user is an org owner.
-  const ownedOrg = await db.query.organizations.findFirst({
-    where: eq(organizations.ownerId, dbUser.id),
+  // ── 2. Any owned corporate org awaiting setup? ────────────────────────────
+  // Must use explicit AND conditions — findFirst(ownerId) alone returns the
+  // personal org first and would cause us to skip this branch.
+  const incompleteCorporateOrg = await db.query.organizations.findFirst({
+    where: and(
+      eq(organizations.ownerId, dbUser.id),
+      eq(organizations.type, "corporate"),
+      eq(organizations.setupComplete, false),
+    ),
   });
 
-  if (ownedOrg) {
-    // Corporate org not yet set up → send to wizard.
-    if (ownedOrg.type === "corporate" && !ownedOrg.setupComplete) {
-      redirect("/onboarding/company-setup");
-    }
-    redirect("/dashboard");
+  if (incompleteCorporateOrg) {
+    redirect("/onboarding/company-setup");
   }
 
-  // 2. Check if user is a member of any org (invited by a company owner).
-  const membership = await db.query.organizationMembers.findFirst({
+  // ── 3. Any org membership at all (personal owner / corporate owner / member)? ──
+  // If the user already has any membership row, they've been through this flow
+  // before — send straight to the app.
+  const anyMembership = await db.query.organizationMembers.findFirst({
     where: eq(organizationMembers.userId, dbUser.id),
   });
 
-  if (membership) {
+  if (anyMembership) {
     redirect("/dashboard");
   }
 
-  // 3. Neither — first-ever sign-in. Create a personal org and go to dashboard.
+  // ── 4. Brand-new user — create a personal workspace and onboard them ──────
   const slug = `personal-${dbUser.id}`;
   const [newOrg] = await db
     .insert(organizations)

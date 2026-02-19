@@ -49,6 +49,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppCommandMenu } from "@/components/app-command-menu";
 import { OrgSwitcher, type OrgMode } from "@/components/org-switcher";
+import { OrgContext } from "@/contexts/org-context";
 import { api } from "@/trpc/react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -85,12 +86,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeOrg = activeMembership?.organization ?? null;
   const isCorporateOwner = isOrgOwner && activeOrg?.type === "corporate";
 
-  // Permission gates (only apply when in org mode as a non-owner member)
-  const canViewTransactions = mode === "personal" || isOrgOwner || (activeMembership?.canViewTransactions ?? true);
-  const canViewCards = mode === "personal" || isOrgOwner || (activeMembership?.canCreateCards ?? false);
-  const canViewReimbursements = mode === "personal" || isOrgOwner || (activeMembership?.canSubmitReimbursements ?? true);
-  const canViewBills = mode === "personal" || isOrgOwner || (activeMembership?.canViewBills ?? false);
-  const canViewIntegrations = mode === "personal" || isOrgOwner || (activeMembership?.canManageIntegrations ?? false);
+  // Permission gates.
+  // In personal mode: everything is visible (it's the user's own workspace).
+  // In org mode: only show sections the membership explicitly grants.
+  // If in org mode but no membership loaded yet (loading / no active org selected),
+  // hide gated sections until we have a confirmed membership — avoids a flash
+  // where a member briefly sees sections they shouldn't.
+  const inPersonal = mode === "personal";
+  const canViewTransactions = inPersonal || isOrgOwner || (activeMembership?.canViewTransactions ?? false);
+  const canViewCards        = inPersonal || isOrgOwner || (activeMembership?.canCreateCards ?? false);
+  const canViewReimbursements = inPersonal || isOrgOwner || (activeMembership?.canSubmitReimbursements ?? false);
+  const canViewBills        = inPersonal || isOrgOwner || (activeMembership?.canViewBills ?? false);
+  const canViewIntegrations = inPersonal || isOrgOwner || (activeMembership?.canManageIntegrations ?? false);
 
   if (isLanding) {
     return <>{children}</>;
@@ -379,7 +386,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-8">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="mx-auto w-full max-w-6xl">
+            <OrgContext.Provider value={{ mode, activeOrgId, activeMembership }}>
+              {children}
+            </OrgContext.Provider>
+          </div>
         </div>
       </SidebarInset>
 

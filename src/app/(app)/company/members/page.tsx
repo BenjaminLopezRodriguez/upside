@@ -7,12 +7,20 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { api } from "@/trpc/react";
+import { useOrg } from "@/contexts/org-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MembersPage() {
-  const { data: members, isLoading } = api.organization.listMembers.useQuery();
+  const { activeOrgId } = useOrg();
+
+  // Skip the query if we don't have an active org yet — avoids fetching members
+  // of the wrong (or no) org.
+  const { data: members, isLoading } = api.organization.listMembers.useQuery(
+    { orgId: activeOrgId! },
+    { enabled: activeOrgId != null },
+  );
 
   return (
     <div className="space-y-6 py-6">
@@ -30,7 +38,7 @@ export default function MembersPage() {
       </div>
 
       <div className="divide-y rounded-xl border bg-card">
-        {isLoading ? (
+        {isLoading || activeOrgId == null ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-5 py-4">
               <Skeleton className="size-9 rounded-full" />
@@ -64,8 +72,14 @@ export default function MembersPage() {
           ))
         ) : (
           <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-            <HugeiconsIcon icon={UserGroupIcon} strokeWidth={1.5} className="size-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">No members yet. Invite your team to get started.</p>
+            <HugeiconsIcon
+              icon={UserGroupIcon}
+              strokeWidth={1.5}
+              className="size-10 text-muted-foreground/50"
+            />
+            <p className="text-sm text-muted-foreground">
+              No members yet. Invite your team to get started.
+            </p>
           </div>
         )}
       </div>
