@@ -1,0 +1,1 @@
+{"location":"src/env.js:createEnv","message":"Invalid environment variables","data":{"validationIssues":[{"path":["KINDE_POST_LOGIN_REDIRECT_URL"],"message":"Required"}]},"timestamp":1771460069397,"hypothesisId":"env-validation"}

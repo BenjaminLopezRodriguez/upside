@@ -15,6 +15,13 @@
       "when": 1771393339916,
       "tag": "0001_unique_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771459677457,
+      "tag": "0002_parallel_talisman",
+      "breakpoints": true
     }
   ]
 }

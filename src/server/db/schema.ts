@@ -267,6 +267,63 @@ export const webhooks = createTable(
   (t) => [index("webhook_user_idx").on(t.userId)],
 );
 
+export const organizations = createTable(
+  "organization",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    name: d.varchar({ length: 256 }).notNull(),
+    slug: d.varchar({ length: 256 }).notNull().unique(),
+    logoUrl: d.varchar({ length: 512 }),
+    // 'personal' = auto-created on first sign-in; 'corporate' = company account with full features
+    type: d.varchar({ length: 32 }).notNull().default("personal"),
+    ownerId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    setupComplete: d.boolean().notNull().default(false),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("org_owner_idx").on(t.ownerId),
+    index("org_slug_idx").on(t.slug),
+  ],
+);
+
+export const organizationMembers = createTable(
+  "organization_member",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    organizationId: d
+      .integer()
+      .notNull()
+      .references(() => organizations.id),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    // 'owner' | 'admin' | 'member'
+    role: d.varchar({ length: 32 }).notNull().default("member"),
+    // Permission scopes — owners always have full access; these apply to non-owner members
+    canViewTransactions: d.boolean().notNull().default(true),
+    canCreateCards: d.boolean().notNull().default(false),
+    canSubmitReimbursements: d.boolean().notNull().default(true),
+    canViewBills: d.boolean().notNull().default(false),
+    canManageIntegrations: d.boolean().notNull().default(false),
+    spendLimit: d.integer(), // null = use org default
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("org_member_org_idx").on(t.organizationId),
+    index("org_member_user_idx").on(t.userId),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
@@ -279,6 +336,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   integrationLinks: many(integrationLinks),
   apiKeys: many(apiKeys),
   webhooks: many(webhooks),
+  ownedOrganizations: many(organizations),
+  organizationMemberships: many(organizationMembers),
 }));
 
 export const cardsRelations = relations(cards, ({ one, many }) => ({
@@ -329,4 +388,17 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
 
 export const webhooksRelations = relations(webhooks, ({ one }) => ({
   user: one(users, { fields: [webhooks.userId], references: [users.id] }),
+}));
+
+export const organizationsRelations = relations(organizations, ({ one, many }) => ({
+  owner: one(users, { fields: [organizations.ownerId], references: [users.id] }),
+  members: many(organizationMembers),
+}));
+
+export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMembers.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, { fields: [organizationMembers.userId], references: [users.id] }),
 }));
