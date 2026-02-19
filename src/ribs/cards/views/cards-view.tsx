@@ -2,15 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { CardsRib } from "../rib";
-import { StatusBadge } from "@/components/status-badge";
+import { PaymentCard } from "@/components/payment-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +15,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -36,8 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Empty,
@@ -57,10 +47,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/page-header";
-import { DetailRow } from "@/components/detail-row";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PlusSignIcon, CreditCardIcon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
+import {
+  PlusSignIcon,
+  CreditCardIcon,
+  AppleIcon,
+  GoogleIcon,
+} from "@hugeicons/core-free-icons";
 
 const typeOptions = [
   { label: "Virtual", value: "virtual" },
@@ -101,15 +95,15 @@ export function CardsView() {
       />
 
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          {vm.cardList.length} cards
+        <p className="text-sm text-muted-foreground">
+          {vm.cardList.length} {vm.cardList.length === 1 ? "card" : "cards"}
         </p>
       </div>
 
       {vm.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44" />
+            <Skeleton key={i} className="aspect-[1.586] w-full rounded-2xl" />
           ))}
         </div>
       ) : vm.cardList.length === 0 ? (
@@ -124,54 +118,27 @@ export function CardsView() {
             </EmptyDescription>
           </EmptyHeader>
           <Button onClick={vm.openCreate}>
-            <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} data-icon="inline-start" />
+            <HugeiconsIcon
+              icon={PlusSignIcon}
+              strokeWidth={2}
+              data-icon="inline-start"
+            />
             New Card
           </Button>
         </Empty>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {vm.cardList.map((card) => (
-            <Card
+            <PaymentCard
               key={card.id}
-              className="cursor-pointer transition-[box-shadow,transform] duration-200 ease-[var(--ease-out-smooth)] hover:shadow-[0_4px_12px_0_rgb(0_0_0/0.06),0_1px_3px_0_rgb(0_0_0/0.04)] dark:hover:shadow-[0_4px_16px_0_rgb(0_0_0/0.3),0_1px_4px_0_rgb(0_0_0/0.2)] hover:-translate-y-0.5"
-              tabIndex={0}
-              role="button"
+              cardName={card.name}
+              last4={card.last4}
+              type={card.type}
+              status={card.status}
+              spendLimitCents={card.spendLimitCents}
+              currentSpendCents={card.currentSpendCents}
               onClick={() => vm.openDetail(card.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  vm.openDetail(card.id);
-                }
-              }}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{card.name}</CardTitle>
-                  <StatusBadge status={card.status} />
-                </div>
-                <CardDescription>
-                  ••{card.last4} &middot; {card.type} &middot; {card.holder}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground tabular-nums">
-                    {card.currentSpend} / {card.spendLimit}
-                  </span>
-                  <span className={cn(
-                    "font-medium tabular-nums",
-                    card.spendPercent >= 90 ? "text-red-600 dark:text-red-400" : card.spendPercent >= 75 ? "text-amber-600 dark:text-amber-400" : ""
-                  )}>{card.spendPercent}%</span>
-                </div>
-                <Progress
-                  value={card.spendPercent}
-                  className={cn(
-                    card.spendPercent >= 90 && "[&_[data-slot=progress-indicator]]:bg-red-500",
-                    card.spendPercent >= 75 && card.spendPercent < 90 && "[&_[data-slot=progress-indicator]]:bg-amber-500"
-                  )}
-                />
-              </CardContent>
-            </Card>
+            />
           ))}
         </div>
       )}
@@ -190,36 +157,67 @@ export function CardsView() {
           if (!open) vm.closeDetail();
         }}
       >
-        <SheetContent>
+        <SheetContent className="flex flex-col gap-0">
           {vm.selectedCard && (
             <>
-              <SheetHeader>
+              <SheetHeader className="px-6 pb-4 pt-6">
                 <SheetTitle>{vm.selectedCard.cardName}</SheetTitle>
-                <SheetDescription>
-                  ••{vm.selectedCard.last4} &middot; {vm.selectedCard.type}
-                </SheetDescription>
               </SheetHeader>
-              <div className="space-y-4 py-4">
-                <DetailRow label="Holder" value={vm.selectedCard.user.name} />
-                <DetailRow label="Status">
-                  <StatusBadge status={vm.selectedCard.status} />
-                </DetailRow>
-                <Separator />
-                <DetailRow
-                  label="Spend Limit"
-                  value={formatCents(vm.selectedCard.spendLimit)}
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <PaymentCard
+                  cardName={vm.selectedCard.cardName}
+                  last4={vm.selectedCard.last4}
+                  type={vm.selectedCard.type}
+                  status={vm.selectedCard.status}
+                  spendLimitCents={vm.selectedCard.spendLimit}
+                  currentSpendCents={vm.selectedCard.currentSpend}
                 />
-                <DetailRow
-                  label="Current Spend"
-                  value={formatCents(vm.selectedCard.currentSpend)}
-                />
-                <Separator />
-                <div className="flex gap-2 pt-2">
+
+                {/* Wallet buttons */}
+                <div className="mt-4 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast.info("Apple Wallet integration coming soon.")
+                    }
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-black px-4 text-white transition-opacity hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
+                  >
+                    <HugeiconsIcon
+                      icon={AppleIcon}
+                      className="size-4 shrink-0"
+                      strokeWidth={0}
+                    />
+                    <span className="text-[13px] font-medium">
+                      Add to Apple Wallet
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast.info("Google Wallet integration coming soon.")
+                    }
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  >
+                    <HugeiconsIcon
+                      icon={GoogleIcon}
+                      className="size-4 shrink-0"
+                      strokeWidth={0}
+                    />
+                    <span className="text-[13px] font-medium">
+                      Save to Google Wallet
+                    </span>
+                  </button>
+                </div>
+
+                <div className="mt-4 flex gap-2">
                   {vm.selectedCard.status === "active" && (
                     <Button
                       variant="outline"
                       onClick={() =>
-                        setConfirmAction({ type: "freeze", cardId: vm.selectedCard!.id })
+                        setConfirmAction({
+                          type: "freeze",
+                          cardId: vm.selectedCard!.id,
+                        })
                       }
                     >
                       Freeze
@@ -229,7 +227,10 @@ export function CardsView() {
                     <Button
                       variant="destructive"
                       onClick={() =>
-                        setConfirmAction({ type: "cancel", cardId: vm.selectedCard!.id })
+                        setConfirmAction({
+                          type: "cancel",
+                          cardId: vm.selectedCard!.id,
+                        })
                       }
                     >
                       Cancel Card
@@ -262,7 +263,9 @@ export function CardsView() {
           <AlertDialogFooter>
             <AlertDialogCancel>Go Back</AlertDialogCancel>
             <AlertDialogAction
-              variant={confirmAction?.type === "cancel" ? "destructive" : "default"}
+              variant={
+                confirmAction?.type === "cancel" ? "destructive" : "default"
+              }
               onClick={handleConfirm}
             >
               {confirmAction?.type === "cancel" ? "Cancel Card" : "Freeze Card"}
@@ -367,13 +370,4 @@ function CreateCardDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-
-
-function formatCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
 }

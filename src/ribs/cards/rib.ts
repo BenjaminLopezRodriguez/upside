@@ -82,10 +82,8 @@ export const CardsRib = createRib({
       last4: c.last4,
       type: c.type,
       status: c.status,
-      holder: c.user.name,
-      spendLimit: formatCents(c.spendLimit),
-      currentSpend: formatCents(c.currentSpend),
-      spendPercent: Math.round((c.currentSpend / c.spendLimit) * 100),
+      spendLimitCents: c.spendLimit,
+      currentSpendCents: c.currentSpend,
     })),
     openDetail: (id: number) => state.setSelectedId(id),
     closeDetail: () => state.setSelectedId(null),
@@ -100,10 +98,3 @@ export const CardsRib = createRib({
     handleCancel: (id: number) => state.cancelCard.mutate({ id }),
   }),
 });
-
-function formatCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
-}

@@ -9,13 +9,26 @@ import { toast } from "sonner";
 export const ReimbursementsRib = createRib({
   name: "Reimbursements",
 
-  interactor: (_deps: Record<string, never>) => {
+  interactor: (deps: { orgId: number | null; isOwner: boolean }) => {
     const [statusFilter, setStatusFilter] = useState<
       "pending" | "approved" | "rejected" | undefined
     >(undefined);
     const [selectedId, setSelectedId] = useState<number | null>(null);
 
-    const list = api.reimbursement.list.useQuery({ status: statusFilter });
+    // Owner view: all reimbursements submitted under their org
+    const orgList = api.reimbursement.listForOrg.useQuery(
+      { orgId: deps.orgId!, status: statusFilter },
+      { enabled: deps.isOwner && deps.orgId !== null },
+    );
+
+    // Member / personal view: only the signed-in user's own submissions
+    const personalList = api.reimbursement.list.useQuery(
+      { status: statusFilter },
+      { enabled: !deps.isOwner },
+    );
+
+    const list = deps.isOwner ? orgList : personalList;
+
     const detail = api.reimbursement.getById.useQuery(
       { id: selectedId! },
       { enabled: selectedId !== null },
@@ -25,7 +38,7 @@ export const ReimbursementsRib = createRib({
 
     const approve = api.reimbursement.approve.useMutation({
       onSuccess: () => {
-        void utils.reimbursement.list.invalidate();
+        void utils.reimbursement.listForOrg.invalidate();
         void utils.reimbursement.getById.invalidate();
         toast.success("Reimbursement approved");
       },
@@ -36,7 +49,7 @@ export const ReimbursementsRib = createRib({
 
     const reject = api.reimbursement.reject.useMutation({
       onSuccess: () => {
-        void utils.reimbursement.list.invalidate();
+        void utils.reimbursement.listForOrg.invalidate();
         void utils.reimbursement.getById.invalidate();
         toast.success("Reimbursement rejected");
       },
@@ -54,6 +67,8 @@ export const ReimbursementsRib = createRib({
       selectedId,
       setSelectedId,
       selectedReimbursement: detail.data ?? null,
+      canApprove: deps.isOwner && deps.orgId !== null,
+      orgId: deps.orgId,
       approve,
       reject,
     };
@@ -94,10 +109,20 @@ export const ReimbursementsRib = createRib({
             : null,
         }
       : null,
+    canApprove: state.canApprove,
+    pageDescription: state.canApprove
+      ? "Review and approve or reject reimbursement requests from your team."
+      : "Track and manage your reimbursement requests.",
     openDetail: (id: number) => state.setSelectedId(id),
     closeDetail: () => state.setSelectedId(null),
-    handleApprove: (id: number) => state.approve.mutate({ id }),
-    handleReject: (id: number) => state.reject.mutate({ id }),
+    handleApprove: (id: number) => {
+      if (state.orgId == null) return;
+      state.approve.mutate({ id, orgId: state.orgId });
+    },
+    handleReject: (id: number) => {
+      if (state.orgId == null) return;
+      state.reject.mutate({ id, orgId: state.orgId });
+    },
   }),
 });
 

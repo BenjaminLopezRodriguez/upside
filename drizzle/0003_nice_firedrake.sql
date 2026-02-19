@@ -1,0 +1,3 @@
+ALTER TABLE "upside_reimbursement" ADD COLUMN "orgId" integer;--> statement-breakpoint
+ALTER TABLE "upside_reimbursement" ADD CONSTRAINT "upside_reimbursement_orgId_upside_organization_id_fk" FOREIGN KEY ("orgId") REFERENCES "public"."upside_organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "reimb_org_idx" ON "upside_reimbursement" USING btree ("orgId");

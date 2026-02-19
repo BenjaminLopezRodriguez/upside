@@ -161,6 +161,7 @@ export const reimbursements = createTable(
       .integer()
       .notNull()
       .references(() => users.id),
+    orgId: d.integer().references(() => organizations.id),
     amount: d.integer().notNull(),
     description: d.varchar({ length: 512 }).notNull(),
     status: reimbursementStatusEnum().notNull().default("pending"),
@@ -172,7 +173,7 @@ export const reimbursements = createTable(
       .notNull(),
     reviewedAt: d.timestamp({ withTimezone: true }),
   }),
-  (t) => [index("reimb_user_idx").on(t.userId)],
+  (t) => [index("reimb_user_idx").on(t.userId), index("reimb_org_idx").on(t.orgId)],
 );
 
 export const bills = createTable(
@@ -365,6 +366,10 @@ export const reimbursementsRelations = relations(
       fields: [reimbursements.userId],
       references: [users.id],
     }),
+    organization: one(organizations, {
+      fields: [reimbursements.orgId],
+      references: [organizations.id],
+    }),
   }),
 );
 
@@ -393,6 +398,7 @@ export const webhooksRelations = relations(webhooks, ({ one }) => ({
 export const organizationsRelations = relations(organizations, ({ one, many }) => ({
   owner: one(users, { fields: [organizations.ownerId], references: [users.id] }),
   members: many(organizationMembers),
+  reimbursements: many(reimbursements),
 }));
 
 export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({

@@ -23,6 +23,7 @@ import {
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,6 +48,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 import { AppCommandMenu } from "@/components/app-command-menu";
 import { OrgSwitcher, type OrgMode } from "@/components/org-switcher";
 import { OrgContext } from "@/contexts/org-context";
@@ -87,6 +93,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isOrgOwner = activeMembership?.role === "owner";
   const activeOrg = activeMembership?.organization ?? null;
   const isCorporateOwner = isOrgOwner && activeOrg?.type === "corporate";
+  const isMember = mode === "org" && activeMembership != null && !isOrgOwner;
+
+  const { user: kindeUser } = useKindeBrowserClient();
+  const memberInitials = kindeUser
+    ? [kindeUser.given_name?.[0], kindeUser.family_name?.[0]]
+        .filter(Boolean)
+        .join("")
+        .toUpperCase() ||
+      kindeUser.email?.[0]?.toUpperCase() ||
+      "U"
+    : "U";
+  const memberDisplayName = kindeUser
+    ? [kindeUser.given_name, kindeUser.family_name].filter(Boolean).join(" ") ||
+      kindeUser.email ||
+      "You"
+    : "";
 
   // Permission gates.
   // In personal mode: everything is visible (it's the user's own workspace).
@@ -113,30 +135,67 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar variant="inset">
         <SidebarHeader className="p-5 pb-3">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 rounded-xl transition-opacity duration-200 hover:opacity-80 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-          >
-            {displayLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={displayLogoUrl}
-                alt={displayName}
-                className="h-7 max-w-[108px] object-contain"
-              />
-            ) : (
-              <Image
-                src="/logo.svg"
-                alt="Upside"
-                width={108}
-                height={29}
-                className="dark:invert"
-                priority
-              />
-            )}
-          </Link>
-          {mode === "org" && activeOrg && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{activeOrg.name}</p>
+          {isMember ? (
+            /* Member view: avatar with company logo badge + name / org */
+            <div className="flex items-center gap-2.5 px-1 py-0.5">
+              <div className="relative shrink-0">
+                <Avatar size="default">
+                  {kindeUser?.picture && (
+                    <AvatarImage src={kindeUser.picture} alt={memberDisplayName} />
+                  )}
+                  <AvatarFallback>{memberInitials}</AvatarFallback>
+                </Avatar>
+                {activeOrg?.logoUrl && (
+                  <div className="absolute -bottom-0.5 -right-0.5 size-[18px] overflow-hidden rounded-full bg-sidebar ring-2 ring-sidebar">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeOrg.logoUrl}
+                      alt={activeOrg.name}
+                      className="size-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium leading-tight">
+                  {memberDisplayName}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {activeOrg?.name}
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Default: logo link */
+            <>
+              <Link
+                href="/"
+                className="flex items-center gap-2.5 rounded-xl transition-opacity duration-200 hover:opacity-80 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              >
+                {displayLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={displayLogoUrl}
+                    alt={displayName}
+                    className="h-7 max-w-[108px] object-contain"
+                  />
+                ) : (
+                  <Image
+                    src="/logo.svg"
+                    alt="Upside"
+                    width={108}
+                    height={29}
+                    className="dark:invert"
+                    priority
+                  />
+                )}
+              </Link>
+              {mode === "org" && activeOrg && (
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {activeOrg.name}
+                </p>
+              )}
+            </>
           )}
         </SidebarHeader>
 
@@ -166,30 +225,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupLabel>Spend</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {canViewTransactions && (
+                  <Collapsible defaultOpen className="group/spend">
                     <SidebarMenuItem>
-                      <SidebarMenuButton
-                        render={<Link href="/transactions" />}
-                        data-active={pathname.startsWith("/transactions")}
-                        tooltip="Transactions"
+                      <CollapsibleTrigger
+                        nativeButton={false}
+                        render={
+                          <span
+                            data-slot="sidebar-menu-button"
+                            data-sidebar="menu-button"
+                            data-size="default"
+                            data-active={
+                              pathname.startsWith("/transactions") ||
+                              pathname.startsWith("/cards")
+                            }
+                            className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
+                            tabIndex={0}
+                            role="button"
+                          />
+                        }
                       >
                         <HugeiconsIcon icon={ArrowLeftRightIcon} strokeWidth={2} />
                         <span>Transactions</span>
-                      </SidebarMenuButton>
+                        <HugeiconsIcon
+                          icon={ArrowDown01Icon}
+                          strokeWidth={2}
+                          className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/spend:rotate-180"
+                        />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {canViewTransactions && (
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton
+                                render={<Link href="/transactions" />}
+                                data-active={pathname.startsWith("/transactions")}
+                              >
+                                <span>All</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )}
+                          {canViewCards && (
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton
+                                render={<Link href="/cards" />}
+                                data-active={pathname.startsWith("/cards")}
+                              >
+                                <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                                <span>Cards</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
                     </SidebarMenuItem>
-                  )}
-                  {canViewCards && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        render={<Link href="/cards" />}
-                        data-active={pathname.startsWith("/cards")}
-                        tooltip="Cards"
-                      >
-                        <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
-                        <span>Cards</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -324,6 +413,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     >
                       <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
                       <span>Members</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      render={<Link href="/company/cards" />}
+                      data-active={pathname.startsWith("/company/cards")}
+                      tooltip="Company Cards"
+                    >
+                      <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                      <span>Cards</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>

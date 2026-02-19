@@ -33,7 +33,13 @@ import { PageHeader } from "@/components/page-header";
 import { DetailRow } from "@/components/detail-row";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Download01Icon, MoneyReceiveSquareIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
+import {
+  Download01Icon,
+  MoneyReceiveSquareIcon,
+  Refresh01Icon,
+  Attachment01Icon,
+  FileAttachmentIcon,
+} from "@hugeicons/core-free-icons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +52,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { downloadCsv } from "@/lib/csv";
 import { toast } from "sonner";
+import { UploadDropzone } from "@/lib/uploadthing";
 
 const tabs = [
   { label: "All", value: "all" },
@@ -54,6 +61,8 @@ const tabs = [
   { label: "Rejected", value: "rejected" },
 ] as const;
 
+type UploadedReceipt = { name: string; url: string; size: number };
+
 export function ReimbursementsView() {
   const vm = ReimbursementsRib.useViewModel();
   const route = ReimbursementsRib.useRoute("detail");
@@ -61,6 +70,7 @@ export function ReimbursementsView() {
     type: "approve" | "reject";
     id: number;
   } | null>(null);
+  const [receipts, setReceipts] = useState<UploadedReceipt[]>([]);
 
   const handleConfirm = useCallback(() => {
     if (!confirmAction) return;
@@ -73,7 +83,7 @@ export function ReimbursementsView() {
     <div className="animate-page-in space-y-8">
       <PageHeader
         title="Reimbursements"
-        description="Review employee reimbursements, approve/reject, and keep spend clean."
+        description={vm.pageDescription}
       />
 
       <Card>
@@ -214,6 +224,61 @@ export function ReimbursementsView() {
         </CardContent>
       </Card>
 
+      {/* Receipt Bin */}
+      <Card>
+        <CardHeader className="border-b border-border/60 pb-4">
+          <div className="flex items-center gap-2">
+            <HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} className="size-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Receipt Bin</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              Images &amp; PDFs up to 8 MB each
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          <UploadDropzone
+            endpoint="receiptUpload"
+            onClientUploadComplete={(files) => {
+              setReceipts((prev) => [
+                ...prev,
+                ...files.map((f) => ({ name: f.name, url: f.url, size: f.size })),
+              ]);
+              toast.success(
+                files.length === 1
+                  ? "Receipt uploaded"
+                  : `${files.length} receipts uploaded`,
+              );
+            }}
+            onUploadError={(err) => { toast.error(err.message); }}
+          />
+          {receipts.length > 0 && (
+            <ul className="divide-y rounded-xl border">
+              {receipts.map((r, i) => (
+                <li key={i} className="flex items-center gap-3 px-4 py-3">
+                  <HugeiconsIcon
+                    icon={FileAttachmentIcon}
+                    strokeWidth={2}
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm">{r.name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {(r.size / 1024).toFixed(0)} KB
+                  </span>
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs text-primary hover:underline"
+                  >
+                    View
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Detail sheet */}
       <Sheet
         open={route.attached}
@@ -241,7 +306,7 @@ export function ReimbursementsView() {
                 {vm.detail.reviewedAt && (
                   <DetailRow label="Reviewed" value={vm.detail.reviewedAt} />
                 )}
-                {vm.detail.status === "pending" && (
+                {vm.detail.status === "pending" && vm.canApprove && (
                   <>
                     <Separator />
                     <div className="flex gap-2 pt-2">
