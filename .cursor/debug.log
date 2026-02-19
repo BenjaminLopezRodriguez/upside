@@ -1,1 +1,12 @@
-{"location":"src/env.js:createEnv","message":"Invalid environment variables","data":{"validationIssues":[{"path":["KINDE_POST_LOGIN_REDIRECT_URL"],"message":"Required"}]},"timestamp":1771460069397,"hypothesisId":"env-validation"}
+{"location":"layout.tsx:AppLayout","message":"Layout render pathname","data":{"pathname":"/","isLanding":true},"timestamp":1771462445779,"hypothesisId":"A"}
+{"location":"layout.tsx:AppLayout","message":"Layout render pathname","data":{"pathname":"/dashboard","isLanding":false},"timestamp":1771462452825,"hypothesisId":"A"}
+{"location":"layout.tsx:AppLayout","message":"Layout render pathname","data":{"pathname":"/dashboard","isLanding":false},"timestamp":1771462457497,"hypothesisId":"A"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462461224,"hypothesisId":"B"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462475149,"hypothesisId":"B"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462491117,"hypothesisId":"B"}
+{"location":"layout.tsx:AppLayout","message":"Layout render pathname","data":{"pathname":"/dashboard","isLanding":false},"timestamp":1771462498461,"hypothesisId":"A"}
+{"location":"layout.tsx:AppLayout","message":"Layout render pathname","data":{"pathname":"/","isLanding":true},"timestamp":1771462507683,"hypothesisId":"A"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462525497,"hypothesisId":"B"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462542734,"hypothesisId":"B"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462611197,"hypothesisId":"B"}
+{"location":"layout.tsx:listMyOrgs","message":"listMyOrgs query error","data":{"pathname":"/","message":"Failed to fetch"},"timestamp":1771462615414,"hypothesisId":"B"}

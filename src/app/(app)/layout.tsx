@@ -74,8 +74,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem("upside-active-org", orgId != null ? String(orgId) : "");
   };
 
-  // ── Org data ──────────────────────────────────────────────────────
-  const { data: myOrgs } = api.organization.listMyOrgs.useQuery();
+  // ── Org data (only when not on landing to avoid 401 + console error) ──
+  const { data: myOrgs } = api.organization.listMyOrgs.useQuery(undefined, {
+    enabled: !isLanding,
+  });
 
   const activeMembership =
     mode === "org" && activeOrgId
