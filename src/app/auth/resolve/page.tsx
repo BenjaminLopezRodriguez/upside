@@ -42,11 +42,22 @@ export default async function ResolvePage() {
         ? `${kindeUser.given_name} ${kindeUser.family_name}`.trim()
         : (kindeUser.given_name ?? kindeUser.family_name ?? kindeUser.email ?? "User");
     const email = kindeUser.email ?? `${kindeUser.id}@kinde.placeholder`;
-    const [inserted] = await db
-      .insert(users)
-      .values({ kindeId: kindeUser.id, name, email })
-      .returning();
-    dbUser = inserted!;
+    const existingByEmail = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+    if (existingByEmail) {
+      await db
+        .update(users)
+        .set({ kindeId: kindeUser.id })
+        .where(eq(users.id, existingByEmail.id));
+      dbUser = { ...existingByEmail, kindeId: kindeUser.id };
+    } else {
+      const [inserted] = await db
+        .insert(users)
+        .values({ kindeId: kindeUser.id, name, email })
+        .returning();
+      dbUser = inserted!;
+    }
   }
 
   // ── 2. Any owned corporate org awaiting setup? ────────────────────────────

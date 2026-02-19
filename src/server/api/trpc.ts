@@ -150,15 +150,29 @@ const withDbUser = t.middleware(async ({ ctx, next }) => {
         ? `${ctx.user.given_name} ${ctx.user.family_name}`.trim()
         : ctx.user.given_name ?? ctx.user.family_name ?? ctx.user.email ?? "User";
     const email = ctx.user.email ?? `${kindeId}@kinde.placeholder`;
-    const [inserted] = await db
-      .insert(users)
-      .values({
-        kindeId,
-        name,
-        email,
-      })
-      .returning();
-    dbUser = inserted!;
+    // Same email may already exist (e.g. Kinde id changed, or account linking)
+    const [existingByEmail] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (existingByEmail) {
+      await db
+        .update(users)
+        .set({ kindeId })
+        .where(eq(users.id, existingByEmail.id));
+      dbUser = { ...existingByEmail, kindeId };
+    } else {
+      const [inserted] = await db
+        .insert(users)
+        .values({
+          kindeId,
+          name,
+          email,
+        })
+        .returning();
+      dbUser = inserted!;
+    }
   }
   return next({
     ctx: { user: ctx.user, dbUser },
