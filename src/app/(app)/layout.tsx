@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -47,28 +48,57 @@ import {
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppCommandMenu } from "@/components/app-command-menu";
+import { OrgSwitcher, type OrgMode } from "@/components/org-switcher";
 import { api } from "@/trpc/react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
 
-  const { data: membership } = api.organization.getMyOrg.useQuery();
+  // ── Mode & active org — persisted to localStorage ─────────────────
+  const [mode, setMode] = useState<OrgMode>("personal");
+  const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
 
-  const isOwner = membership?.role === "owner";
-  const org = membership?.organization;
-  const isCorporateOwner = isOwner && org?.type === "corporate";
+  useEffect(() => {
+    const savedMode = localStorage.getItem("upside-mode") as OrgMode | null;
+    const savedOrgId = localStorage.getItem("upside-active-org");
+    if (savedMode) setMode(savedMode);
+    if (savedOrgId) setActiveOrgId(Number(savedOrgId));
+  }, []);
 
-  // For non-owner members, filter nav items based on granted permissions.
-  const canViewTransactions = isOwner || (membership?.canViewTransactions ?? true);
-  const canViewCards = isOwner || (membership?.canCreateCards ?? false);
-  const canViewReimbursements = isOwner || (membership?.canSubmitReimbursements ?? true);
-  const canViewBills = isOwner || (membership?.canViewBills ?? false);
-  const canViewIntegrations = isOwner || (membership?.canManageIntegrations ?? false);
+  const handleModeSelect = (newMode: OrgMode, orgId: number | null = null) => {
+    setMode(newMode);
+    setActiveOrgId(orgId);
+    localStorage.setItem("upside-mode", newMode);
+    localStorage.setItem("upside-active-org", orgId != null ? String(orgId) : "");
+  };
+
+  // ── Org data ──────────────────────────────────────────────────────
+  const { data: myOrgs } = api.organization.listMyOrgs.useQuery();
+
+  const activeMembership =
+    mode === "org" && activeOrgId
+      ? (myOrgs?.find((m) => m.organization.id === activeOrgId) ?? null)
+      : null;
+
+  const isOrgOwner = activeMembership?.role === "owner";
+  const activeOrg = activeMembership?.organization ?? null;
+  const isCorporateOwner = isOrgOwner && activeOrg?.type === "corporate";
+
+  // Permission gates (only apply when in org mode as a non-owner member)
+  const canViewTransactions = mode === "personal" || isOrgOwner || (activeMembership?.canViewTransactions ?? true);
+  const canViewCards = mode === "personal" || isOrgOwner || (activeMembership?.canCreateCards ?? false);
+  const canViewReimbursements = mode === "personal" || isOrgOwner || (activeMembership?.canSubmitReimbursements ?? true);
+  const canViewBills = mode === "personal" || isOrgOwner || (activeMembership?.canViewBills ?? false);
+  const canViewIntegrations = mode === "personal" || isOrgOwner || (activeMembership?.canManageIntegrations ?? false);
 
   if (isLanding) {
     return <>{children}</>;
   }
+
+  // The logo/name shown in the sidebar header
+  const displayName = mode === "org" && activeOrg ? activeOrg.name : "Upside";
+  const displayLogoUrl = mode === "org" ? activeOrg?.logoUrl : null;
 
   return (
     <SidebarProvider>
@@ -78,11 +108,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             href="/"
             className="flex items-center gap-2.5 rounded-xl transition-opacity duration-200 hover:opacity-80 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
-            {org?.logoUrl ? (
+            {displayLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={org.logoUrl}
-                alt={org.name}
+                src={displayLogoUrl}
+                alt={displayName}
                 className="h-7 max-w-[108px] object-contain"
               />
             ) : (
@@ -96,12 +126,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               />
             )}
           </Link>
-          {org && (
-            <p className="mt-1 truncate text-xs text-muted-foreground">{org.name}</p>
+          {mode === "org" && activeOrg && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{activeOrg.name}</p>
           )}
         </SidebarHeader>
+
         <SidebarContent className="px-1">
-          {/* Overview — visible to everyone */}
+          {/* Overview — always visible */}
           <SidebarGroup>
             <SidebarGroupLabel>Overview</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -120,7 +151,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Spend — gated by member permissions */}
+          {/* Spend — gated in org mode by member perms */}
           {(canViewTransactions || canViewCards) && (
             <SidebarGroup>
               <SidebarGroupLabel>Spend</SidebarGroupLabel>
@@ -155,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
           )}
 
-          {/* Finance — gated by member permissions */}
+          {/* Finance — gated in org mode by member perms */}
           {(canViewReimbursements || canViewBills) && (
             <SidebarGroup>
               <SidebarGroupLabel>Finance</SidebarGroupLabel>
@@ -202,7 +233,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
           )}
 
-          {/* Integrations — gated by member permissions */}
+          {/* Integrations — gated in org mode */}
           {canViewIntegrations && (
             <SidebarGroup>
               <SidebarGroupLabel>Integrations</SidebarGroupLabel>
@@ -226,7 +257,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       >
                         <HugeiconsIcon icon={Share08Icon} strokeWidth={2} />
                         <span>Integrations</span>
-                        <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/integrations:rotate-180" />
+                        <HugeiconsIcon
+                          icon={ArrowDown01Icon}
+                          strokeWidth={2}
+                          className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/integrations:rotate-180"
+                        />
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
@@ -266,8 +301,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
           )}
 
-          {/* Company section — corporate owners only */}
-          {isCorporateOwner && (
+          {/* Company — corporate owners in org mode only */}
+          {mode === "org" && isCorporateOwner && (
             <SidebarGroup>
               <SidebarGroupLabel>Company</SidebarGroupLabel>
               <SidebarGroupContent>
@@ -297,8 +332,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
           )}
         </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
+
+        <SidebarFooter className="gap-1 px-3 pb-3">
+          {/* Mode switcher */}
+          <OrgSwitcher
+            mode={mode}
+            activeOrgId={activeOrgId}
+            onSelect={handleModeSelect}
+          />
+
+          <SidebarMenu className="mt-1">
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link href="/settings" />}
@@ -312,11 +355,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={
-                  (props) => (
-                    <LogoutLink {...props}>
-                      {props.children}
-                    </LogoutLink>
-                  ) as React.ReactElement
+                  (props) =>
+                    (
+                      <LogoutLink {...props}>{props.children}</LogoutLink>
+                    ) as React.ReactElement
                 }
                 tooltip="Sign out"
                 className="text-muted-foreground hover:text-foreground"
@@ -328,6 +370,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
+
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 px-6">
           <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />

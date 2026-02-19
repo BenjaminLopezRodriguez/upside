@@ -1,31 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-// #region agent log
-function logEnvValidationFailure(issues) {
-  const safe = Array.isArray(issues)
-    ? issues.map((i) => ({
-        path: i.path,
-        message: i.message ?? i.msg ?? String(i),
-      }))
-    : [{ message: String(issues) }];
-  fetch(
-    "http://127.0.0.1:7250/ingest/ecff5216-bb90-46a6-b196-85131ffdf78f",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "src/env.js:createEnv",
-        message: "Invalid environment variables",
-        data: { validationIssues: safe },
-        timestamp: Date.now(),
-        hypothesisId: "env-validation",
-      }),
-    }
-  ).catch(() => {});
-}
-// #endregion
-
 export const env = createEnv({
   /**
    * Specify your server-side environment variables schema here. This way you can ensure the app
@@ -82,11 +57,4 @@ export const env = createEnv({
    * `SOME_VAR=''` will throw an error.
    */
   emptyStringAsUndefined: true,
-  // #region agent log
-  onValidationError(issues) {
-    logEnvValidationFailure(issues);
-    console.error("❌ Invalid environment variables:", issues);
-    throw new Error("Invalid environment variables");
-  },
-  // #endregion
 });

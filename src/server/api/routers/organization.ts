@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
@@ -90,6 +90,92 @@ export const organizationRouter = createTRPCRouter({
       with: { user: true },
     });
   }),
+
+  /** All orgs the current user belongs to (as owner or member). */
+  listMyOrgs: protectedProcedureWithUser.query(async ({ ctx }) => {
+    return ctx.db.query.organizationMembers.findMany({
+      where: eq(organizationMembers.userId, ctx.dbUser.id),
+      with: { organization: true },
+    });
+  }),
+
+  /** Create a new corporate organization. The caller becomes the owner. */
+  createOrg: protectedProcedureWithUser
+    .input(
+      z.object({
+        name: z.string().min(1).max(256),
+        logoUrl: z.string().url().nullish(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const slug = `org-${ctx.dbUser.id}-${Date.now()}`;
+      const [newOrg] = await ctx.db
+        .insert(organizations)
+        .values({
+          name: input.name,
+          slug,
+          type: "corporate",
+          ownerId: ctx.dbUser.id,
+          setupComplete: true,
+          ...(input.logoUrl ? { logoUrl: input.logoUrl } : {}),
+        })
+        .returning();
+
+      await ctx.db.insert(organizationMembers).values({
+        organizationId: newOrg!.id,
+        userId: ctx.dbUser.id,
+        role: "owner",
+        canViewTransactions: true,
+        canCreateCards: true,
+        canSubmitReimbursements: true,
+        canViewBills: true,
+        canManageIntegrations: true,
+      });
+
+      return newOrg!;
+    }),
+
+  /** Search orgs by name, excluding orgs the user already belongs to. */
+  searchOrgs: protectedProcedureWithUser
+    .input(z.object({ query: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (!input.query.trim()) return [];
+
+      const myMemberships = await ctx.db
+        .select({ orgId: organizationMembers.organizationId })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.userId, ctx.dbUser.id));
+
+      const myOrgIds = new Set(myMemberships.map((m) => m.orgId));
+
+      const results = await ctx.db.query.organizations.findMany({
+        where: ilike(organizations.name, `%${input.query.trim()}%`),
+        limit: 12,
+      });
+
+      return results.filter((org) => !myOrgIds.has(org.id));
+    }),
+
+  /** Join an existing org as a member. */
+  joinOrg: protectedProcedureWithUser
+    .input(z.object({ orgId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.organizationMembers.findFirst({
+        where: and(
+          eq(organizationMembers.organizationId, input.orgId),
+          eq(organizationMembers.userId, ctx.dbUser.id),
+        ),
+      });
+      if (existing) {
+        throw new TRPCError({ code: "CONFLICT", message: "Already a member of this organization" });
+      }
+
+      await ctx.db.insert(organizationMembers).values({
+        organizationId: input.orgId,
+        userId: ctx.dbUser.id,
+        role: "member",
+      });
+    }),
 
   /** Update a member's permission scopes (owner only). */
   updateMemberPermissions: protectedProcedureWithUser
