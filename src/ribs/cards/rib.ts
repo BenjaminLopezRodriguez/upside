@@ -84,6 +84,9 @@ export const CardsRib = createRib({
       status: c.status,
       spendLimitCents: c.spendLimit,
       currentSpendCents: c.currentSpend,
+      cardColor: c.cardColor,
+      logoUrl: c.logoUrl,
+      material: c.material,
     })),
     openDetail: (id: number) => state.setSelectedId(id),
     closeDetail: () => state.setSelectedId(null),
@@ -93,6 +96,9 @@ export const CardsRib = createRib({
       cardName: string;
       type: "virtual" | "physical";
       spendLimit: number;
+      cardColor?: string;
+      logoUrl?: string;
+      material?: string;
     }) => state.createCard.mutate(data),
     handleFreeze: (id: number) => state.freezeCard.mutate({ id }),
     handleCancel: (id: number) => state.cancelCard.mutate({ id }),

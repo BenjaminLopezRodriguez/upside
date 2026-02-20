@@ -8,7 +8,7 @@ export const SettingsRib = createRib({
   name: "Settings",
 
   interactor: (_deps: Record<string, never>) => {
-    const [activeTab, setActiveTab] = useState("company");
+    const [activeTab, setActiveTab] = useState("account");
     const teamList = api.user.list.useQuery();
 
     return {

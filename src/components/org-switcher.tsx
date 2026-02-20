@@ -71,39 +71,57 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
 
   return (
     <>
-      {/* Segmented toggle */}
-      <div className="flex gap-0.5 rounded-lg bg-sidebar-accent/60 p-0.5">
-        <button
-          onClick={handlePersonalTabClick}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-            mode === "personal"
-              ? "bg-sidebar text-sidebar-foreground shadow-sm"
-              : "text-muted-foreground hover:text-sidebar-foreground",
-          )}
-        >
-          <HugeiconsIcon icon={User02Icon} className="size-3.5" strokeWidth={2} />
-          Personal
-        </button>
-        <button
-          onClick={handleOrgTabClick}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-            mode === "org"
-              ? "bg-sidebar text-sidebar-foreground shadow-sm"
-              : "text-muted-foreground hover:text-sidebar-foreground",
-          )}
-        >
-          <HugeiconsIcon icon={Building01Icon} className="size-3.5" strokeWidth={2} />
-          Organization
-        </button>
+      {/* Find org (personal) + Segmented toggle */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {mode === "personal" && (
+          <>
+            <button
+              onClick={() => setJoinOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              aria-label="Find an organization"
+            >
+              <HugeiconsIcon icon={SearchIcon} className="size-3.5 shrink-0" strokeWidth={2} />
+              <span className="hidden sm:inline">Find an organization</span>
+            </button>
+            <div className="min-w-0 flex-1" aria-hidden />
+          </>
+        )}
+        <div className="flex shrink-0 gap-0.5 rounded-lg bg-sidebar-accent/60 p-0.5">
+          <button
+            onClick={handlePersonalTabClick}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
+              mode === "personal"
+                ? "bg-sidebar text-sidebar-foreground shadow-sm"
+                : "text-muted-foreground hover:text-sidebar-foreground",
+            )}
+            aria-label="Personal"
+          >
+            <HugeiconsIcon icon={User02Icon} className="size-3.5 shrink-0" strokeWidth={2} />
+            <span className="hidden sm:inline">Personal</span>
+          </button>
+          <button
+            onClick={handleOrgTabClick}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
+              mode === "org"
+                ? "bg-sidebar text-sidebar-foreground shadow-sm"
+                : "text-muted-foreground hover:text-sidebar-foreground",
+            )}
+            aria-label="Organization"
+          >
+            <HugeiconsIcon icon={Building01Icon} className="size-3.5 shrink-0" strokeWidth={2} />
+            <span className="hidden sm:inline">Organization</span>
+          </button>
+        </div>
       </div>
 
       {/* Active org chip (org mode) */}
       {mode === "org" && activeMembership && (
         <button
           onClick={() => setSelectorOpen(true)}
-          className="mt-1 flex w-full items-center gap-2 rounded-md border border-border/60 bg-sidebar-accent/40 px-2.5 py-2 text-left transition-colors hover:bg-sidebar-accent/70"
+          className="mt-0.5 flex w-auto shrink-0 items-center gap-1 rounded-md border border-border/60 bg-sidebar-accent/40 px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/70 sm:mt-1 sm:w-full sm:gap-2 sm:px-2.5 sm:py-2"
+          aria-label={`${activeMembership.organization.name}, ${activeMembership.role}. Switch organization`}
         >
           <div className="flex size-6 shrink-0 items-center justify-center rounded bg-primary/15 text-primary">
             {activeMembership.organization.logoUrl ? (
@@ -117,7 +135,7 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
               <HugeiconsIcon icon={Building01Icon} className="size-3.5" strokeWidth={2} />
             )}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="hidden min-w-0 flex-1 sm:block">
             <p className="truncate text-xs font-medium leading-tight">
               {activeMembership.organization.name}
             </p>
@@ -130,17 +148,6 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
             className="size-3.5 shrink-0 text-muted-foreground"
             strokeWidth={2}
           />
-        </button>
-      )}
-
-      {/* Personal mode: find org CTA */}
-      {mode === "personal" && (
-        <button
-          onClick={() => setJoinOpen(true)}
-          className="mt-1 flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-        >
-          <HugeiconsIcon icon={SearchIcon} className="size-3.5 shrink-0" strokeWidth={2} />
-          <span>Find an organization</span>
         </button>
       )}
 

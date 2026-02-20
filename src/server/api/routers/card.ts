@@ -29,13 +29,17 @@ export const cardRouter = createTRPCRouter({
         cardName: z.string().min(1),
         type: z.enum(["virtual", "physical"]),
         spendLimit: z.number().min(100),
+        cardColor: z.string().max(32).optional(),
+        logoUrl: z.string().url().max(512).optional(),
+        material: z.string().max(32).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { cardColor, logoUrl, material, ...rest } = input;
       const last4 = String(Math.floor(1000 + Math.random() * 9000));
       const [card] = await ctx.db
         .insert(cards)
-        .values({ ...input, userId: ctx.dbUser.id, last4 })
+        .values({ ...rest, userId: ctx.dbUser.id, last4, cardColor, logoUrl, material })
         .returning();
       return card;
     }),
@@ -71,6 +75,9 @@ export const cardRouter = createTRPCRouter({
         cardName: z.string().min(1),
         type: z.enum(["virtual", "physical"]),
         spendLimit: z.number().min(100),
+        cardColor: z.string().max(32).optional(),
+        logoUrl: z.string().url().max(512).optional(),
+        material: z.string().max(32).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -97,6 +104,9 @@ export const cardRouter = createTRPCRouter({
           cardName: input.cardName,
           type: input.type,
           spendLimit: input.spendLimit,
+          cardColor: input.cardColor,
+          logoUrl: input.logoUrl,
+          material: input.material,
           userId: membership.userId,
           last4,
         })

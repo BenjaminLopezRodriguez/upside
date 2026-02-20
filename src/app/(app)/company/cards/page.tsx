@@ -41,6 +41,8 @@ export default function CompanyCardsPage() {
                 status={card.status}
                 spendLimitCents={card.spendLimit}
                 currentSpendCents={card.currentSpend}
+                cardColor={card.cardColor}
+                issuerLogo={card.logoUrl ? <img src={card.logoUrl} alt="" className="h-full w-full object-contain" /> : undefined}
               />
               <p className="px-1 text-xs text-muted-foreground">{card.user.name}</p>
             </div>

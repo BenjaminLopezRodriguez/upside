@@ -104,6 +104,9 @@ export const cards = createTable(
     status: cardStatusEnum().notNull().default("active"),
     spendLimit: d.integer().notNull().default(500000),
     currentSpend: d.integer().notNull().default(0),
+    cardColor: d.varchar({ length: 32 }),
+    logoUrl: d.varchar({ length: 512 }),
+    material: d.varchar({ length: 32 }),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => new Date())

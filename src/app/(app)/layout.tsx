@@ -442,13 +442,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
 
         <SidebarFooter className="gap-1 px-3 pb-3">
-          {/* Mode switcher */}
-          <OrgSwitcher
-            mode={mode}
-            activeOrgId={activeOrgId}
-            onSelect={handleModeSelect}
-          />
-
           <SidebarMenu className="mt-1">
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -482,7 +475,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 px-6">
           <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />
-          <div className="ml-auto flex items-center gap-1">
+          <OrgSwitcher
+            mode={mode}
+            activeOrgId={activeOrgId}
+            onSelect={handleModeSelect}
+          />
+          <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
           </div>
         </header>

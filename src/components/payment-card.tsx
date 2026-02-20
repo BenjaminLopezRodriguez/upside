@@ -2,6 +2,15 @@
 
 import { cn } from "@/lib/utils";
 
+const CARD_BG: Record<string, string> = {
+  lime: "bg-lime-400",
+  sky: "bg-sky-400",
+  amber: "bg-amber-400",
+  rose: "bg-rose-400",
+  violet: "bg-violet-400",
+  emerald: "bg-emerald-400",
+};
+
 interface PaymentCardProps {
   cardName: string;
   last4: string;
@@ -9,6 +18,8 @@ interface PaymentCardProps {
   status: "active" | "frozen" | "cancelled";
   spendLimitCents: number;
   currentSpendCents: number;
+  /** Preset key for card background (e.g. lime, sky). Defaults to lime. */
+  cardColor?: string | null;
   /** Logo or avatar of the card issuer — shown top-left */
   issuerLogo?: React.ReactNode;
   onClick?: () => void;
@@ -22,10 +33,12 @@ export function PaymentCard({
   status,
   spendLimitCents,
   currentSpendCents,
+  cardColor,
   issuerLogo,
   onClick,
   className,
 }: PaymentCardProps) {
+  const bgClass = (cardColor && CARD_BG[cardColor]) || "bg-lime-400";
   const spendPercent =
     spendLimitCents > 0
       ? Math.min(Math.round((currentSpendCents / spendLimitCents) * 100), 100)
@@ -35,7 +48,8 @@ export function PaymentCard({
     <div
       className={cn(
         "relative w-full overflow-hidden rounded-lg aspect-[1.586]",
-        "bg-card-foreground text-card",
+        bgClass,
+        "shadow-[inset_0px_9px_27px_-4px_rgba(255,_255,_255,_0.4),0px_0px_27px_-4px_rgba(0,_0,_0,_0.1)] [&_*]:text-black",
         status === "cancelled" && "opacity-50",
         onClick &&
           "cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",

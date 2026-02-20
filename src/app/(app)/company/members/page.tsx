@@ -9,7 +9,14 @@ import {
   MoneyReceiveSquareIcon,
   MoreVerticalIcon,
   Attachment01Icon,
+  CustomizeIcon,
 } from "@hugeicons/core-free-icons";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import { UploadDropzone } from "@/lib/uploadthing";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
@@ -47,6 +54,20 @@ type Member = {
   user: { name: string; email: string };
 };
 
+const CARD_COLOR_OPTIONS = [
+  { value: "lime", bg: "bg-lime-400" },
+  { value: "sky", bg: "bg-sky-400" },
+  { value: "amber", bg: "bg-amber-400" },
+  { value: "rose", bg: "bg-rose-400" },
+  { value: "violet", bg: "bg-violet-400" },
+  { value: "emerald", bg: "bg-emerald-400" },
+] as const;
+
+const MATERIAL_OPTIONS = [
+  { label: "Plastic", value: "plastic" },
+  { label: "Metal", value: "metal" },
+];
+
 function IssueCardDialog({
   member,
   orgId,
@@ -61,6 +82,9 @@ function IssueCardDialog({
   const [cardName, setCardName] = useState("");
   const [type, setType] = useState<"virtual" | "physical">("virtual");
   const [spendLimit, setSpendLimit] = useState("500");
+  const [cardColor, setCardColor] = useState("lime");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [material, setMaterial] = useState("plastic");
 
   const issueCard = api.card.issueForMember.useMutation({
     onSuccess: () => {
@@ -68,6 +92,9 @@ function IssueCardDialog({
       onOpenChange(false);
       setCardName("");
       setSpendLimit("500");
+      setCardColor("lime");
+      setLogoUrl("");
+      setMaterial("plastic");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -76,7 +103,16 @@ function IssueCardDialog({
     e.preventDefault();
     const limitDollars = parseFloat(spendLimit);
     if (!cardName.trim() || isNaN(limitDollars) || limitDollars < 1) return;
-    issueCard.mutate({ orgId, memberId: member.id, cardName: cardName.trim(), type, spendLimit: Math.round(limitDollars * 100) });
+    issueCard.mutate({
+      orgId,
+      memberId: member.id,
+      cardName: cardName.trim(),
+      type,
+      spendLimit: Math.round(limitDollars * 100),
+      cardColor,
+      logoUrl: logoUrl.trim() || undefined,
+      material: type === "physical" ? material : undefined,
+    });
   };
 
   return (
@@ -120,6 +156,70 @@ function IssueCardDialog({
               required
             />
           </div>
+
+          <Collapsible className="rounded-lg border border-border">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <HugeiconsIcon icon={CustomizeIcon} className="size-4 shrink-0" strokeWidth={2} />
+                <span>Customize</span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-4 border-t border-border px-4 py-3">
+                <div className="space-y-2">
+                  <Label>Color</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {CARD_COLOR_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setCardColor(opt.value)}
+                        className={cn(
+                          "size-8 rounded-full border-2 transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          opt.bg,
+                          cardColor === opt.value
+                            ? "border-foreground shadow-md"
+                            : "border-transparent hover:shadow",
+                        )}
+                        title={opt.value}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="logo-url">Logo URL</Label>
+                  <Input
+                    id="logo-url"
+                    type="url"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://…"
+                  />
+                </div>
+                {type === "physical" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="material">Material</Label>
+                    <Select value={material} onValueChange={setMaterial}>
+                      <SelectTrigger id="material">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MATERIAL_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
