@@ -4,7 +4,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Sign in — Upside",
+  title: "Sign in — Deltra",
 };
 
 export default async function SignInPage() {
@@ -37,7 +37,7 @@ export default async function SignInPage() {
         <div className="animate-page-in">
           <Image
             src="/logo.svg"
-            alt="Upside"
+            alt="Deltra"
             width={164}
             height={44}
             className="dark:invert"
@@ -73,7 +73,7 @@ export default async function SignInPage() {
         {/* CTA */}
         <div className="animate-page-in stagger-3">
           <LoginLink className="inline-flex h-11 items-center justify-center rounded-4xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98]">
-            Sign in to Upside
+            Sign in to Deltra
           </LoginLink>
         </div>
       </div>

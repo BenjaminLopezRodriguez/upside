@@ -21,6 +21,10 @@ import {
   Logout01Icon,
   Building01Icon,
   UserGroupIcon,
+  UserAdd01Icon,
+  Login01Icon,
+  Briefcase01Icon,
+  GlobeIcon,
 } from "@hugeicons/core-free-icons";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
@@ -48,6 +52,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AskDeltraPanel } from "@/components/ask-deltra-panel";
 import {
   Avatar,
   AvatarImage,
@@ -62,13 +67,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
 
+  // Defer full layout (Base UI sidebar) until after mount to avoid SSR/client useId hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // ── Mode & active org — persisted to localStorage ─────────────────
   const [mode, setMode] = useState<OrgMode>("personal");
   const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
 
   useEffect(() => {
-    const savedMode = localStorage.getItem("upside-mode") as OrgMode | null;
-    const savedOrgId = localStorage.getItem("upside-active-org");
+    const savedMode = localStorage.getItem("deltra-mode") as OrgMode | null;
+    const savedOrgId = localStorage.getItem("deltra-active-org");
     if (savedMode) setMode(savedMode);
     if (savedOrgId) setActiveOrgId(Number(savedOrgId));
   }, []);
@@ -76,8 +87,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleModeSelect = (newMode: OrgMode, orgId: number | null = null) => {
     setMode(newMode);
     setActiveOrgId(orgId);
-    localStorage.setItem("upside-mode", newMode);
-    localStorage.setItem("upside-active-org", orgId != null ? String(orgId) : "");
+    localStorage.setItem("deltra-mode", newMode);
+    localStorage.setItem("deltra-active-org", orgId != null ? String(orgId) : "");
   };
 
   // ── Org data (only when not on landing to avoid 401 + console error) ──
@@ -127,8 +138,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Before mount: render a shell with no Base UI so server and client match (avoids useId hydration mismatch).
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <aside
+          className="hidden md:block w-64 shrink-0 border-r border-sidebar-border bg-sidebar"
+          style={{ width: "16rem" }}
+          aria-hidden
+        />
+        <div className="flex min-h-0 flex-1 flex-col min-w-0">
+          <header className="h-14 shrink-0 border-b border-sidebar-border flex items-center px-6" />
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-8">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // The logo/name shown in the sidebar header
-  const displayName = mode === "org" && activeOrg ? activeOrg.name : "Upside";
+  const displayName = mode === "org" && activeOrg ? activeOrg.name : "Deltra";
   const displayLogoUrl = mode === "org" ? activeOrg?.logoUrl : null;
 
   return (
@@ -182,7 +212,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 ) : (
                   <Image
                     src="/logo.svg"
-                    alt="Upside"
+                    alt="Deltra"
                     width={108}
                     height={29}
                     className="dark:invert"
@@ -219,225 +249,341 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Spend — gated in org mode by member perms */}
-          {(canViewTransactions || canViewCards) && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Spend</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <Collapsible defaultOpen className="group/spend">
+          {/* Personal: Cards, Payments (get paid back + bills), Jobs, Portals */}
+          {inPersonal && (
+            <>
+              <SidebarGroup>
+                <SidebarGroupLabel>Cards</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
-                      <CollapsibleTrigger
-                        nativeButton={false}
-                        render={
-                          <span
-                            data-slot="sidebar-menu-button"
-                            data-sidebar="menu-button"
-                            data-size="default"
-                            data-active={
-                              pathname.startsWith("/transactions") ||
-                              pathname.startsWith("/cards")
-                            }
-                            className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
-                            tabIndex={0}
-                            role="button"
-                          />
-                        }
+                      <SidebarMenuButton
+                        render={<Link href="/cards" />}
+                        data-active={pathname.startsWith("/cards")}
+                        tooltip="Cards"
                       >
-                        <HugeiconsIcon icon={ArrowLeftRightIcon} strokeWidth={2} />
-                        <span>Transactions</span>
-                        <HugeiconsIcon
-                          icon={ArrowDown01Icon}
-                          strokeWidth={2}
-                          className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/spend:rotate-180"
-                        />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {canViewTransactions && (
-                            <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
-                                render={<Link href="/transactions" />}
-                                data-active={pathname.startsWith("/transactions")}
-                              >
-                                <span>All</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          )}
-                          {canViewCards && (
-                            <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
-                                render={<Link href="/cards" />}
-                                data-active={pathname.startsWith("/cards")}
-                              >
-                                <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
-                                <span>Cards</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          )}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
+                        <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                        <span>Cards</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
-                  </Collapsible>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
-          {/* Finance — gated in org mode by member perms */}
-          {(canViewReimbursements || canViewBills) && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Finance</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {canViewReimbursements && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Payments</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         render={<Link href="/reimbursements" />}
                         data-active={pathname.startsWith("/reimbursements")}
-                        tooltip="Reimbursements"
+                        tooltip="Get paid back"
                       >
                         <HugeiconsIcon icon={MoneyReceiveSquareIcon} strokeWidth={2} />
-                        <span>Reimbursements</span>
+                        <span>Get paid back</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )}
-                  {canViewBills && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          render={<Link href="/bills" />}
-                          data-active={pathname.startsWith("/bills")}
-                          tooltip="Bill Pay"
-                        >
-                          <HugeiconsIcon icon={Invoice01Icon} strokeWidth={2} />
-                          <span>Bill Pay</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          render={<Link href="/invoices" />}
-                          data-active={pathname.startsWith("/invoices")}
-                          tooltip="Invoices"
-                        >
-                          <HugeiconsIcon icon={InvoiceIcon} strokeWidth={2} />
-                          <span>Invoices</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* Integrations — gated in org mode */}
-          {canViewIntegrations && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Integrations</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <Collapsible defaultOpen className="group/integrations">
                     <SidebarMenuItem>
-                      <CollapsibleTrigger
-                        nativeButton={false}
-                        render={
-                          <span
-                            data-slot="sidebar-menu-button"
-                            data-sidebar="menu-button"
-                            data-size="default"
-                            data-active={pathname.startsWith("/integrations")}
-                            className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
-                            tabIndex={0}
-                            role="button"
-                          />
-                        }
+                      <SidebarMenuButton
+                        render={<Link href="/bills" />}
+                        data-active={pathname.startsWith("/bills")}
+                        tooltip="Bills"
                       >
-                        <HugeiconsIcon icon={Share08Icon} strokeWidth={2} />
-                        <span>Integrations</span>
-                        <HugeiconsIcon
-                          icon={ArrowDown01Icon}
-                          strokeWidth={2}
-                          className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/integrations:rotate-180"
-                        />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton
-                              render={<Link href="/integrations/api" />}
-                              data-active={pathname.startsWith("/integrations/api")}
-                            >
-                              <HugeiconsIcon icon={CodeIcon} strokeWidth={2} />
-                              <span>API</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton
-                              render={<Link href="/integrations/link" />}
-                              data-active={pathname.startsWith("/integrations/link")}
-                            >
-                              <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
-                              <span>Link</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton
-                              render={<Link href="/integrations/automations" />}
-                              data-active={pathname.startsWith("/integrations/automations")}
-                            >
-                              <HugeiconsIcon icon={FlowCircleIcon} strokeWidth={2} />
-                              <span>Automations</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
+                        <HugeiconsIcon icon={Invoice01Icon} strokeWidth={2} />
+                        <span>Bills</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
-                  </Collapsible>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup>
+                <SidebarGroupLabel>Jobs</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<Link href="/jobs" />}
+                        data-active={pathname.startsWith("/jobs")}
+                        tooltip="Jobs"
+                      >
+                        <HugeiconsIcon icon={Briefcase01Icon} strokeWidth={2} />
+                        <span>Jobs</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup>
+                <SidebarGroupLabel>Portals</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<Link href="/portals" />}
+                        data-active={pathname.startsWith("/portals")}
+                        tooltip="Portals"
+                      >
+                        <HugeiconsIcon icon={GlobeIcon} strokeWidth={2} />
+                        <span>Portals</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </>
           )}
 
-          {/* Company — corporate owners in org mode only */}
-          {mode === "org" && isCorporateOwner && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Company</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      render={<Link href="/company/members" />}
-                      data-active={pathname.startsWith("/company/members")}
-                      tooltip="Members"
-                    >
-                      <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
-                      <span>Members</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      render={<Link href="/company/cards" />}
-                      data-active={pathname.startsWith("/company/cards")}
-                      tooltip="Company Cards"
-                    >
-                      <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
-                      <span>Cards</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      render={<Link href="/company/settings" />}
-                      data-active={pathname.startsWith("/company/settings")}
-                      tooltip="Company Settings"
-                    >
-                      <HugeiconsIcon icon={Building01Icon} strokeWidth={2} />
-                      <span>Company Settings</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+          {/* Organization: Spend, Finance, Workforce, Integrations, Company */}
+          {!inPersonal && (
+            <>
+              {(canViewTransactions || canViewCards) && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Spend</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <Collapsible defaultOpen className="group/spend">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger
+                            nativeButton={false}
+                            render={
+                              <span
+                                data-slot="sidebar-menu-button"
+                                data-sidebar="menu-button"
+                                data-size="default"
+                                data-active={
+                                  pathname.startsWith("/transactions") ||
+                                  pathname.startsWith("/cards")
+                                }
+                                className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
+                                tabIndex={0}
+                                role="button"
+                              />
+                            }
+                          >
+                            <HugeiconsIcon icon={ArrowLeftRightIcon} strokeWidth={2} />
+                            <span>Transactions</span>
+                            <HugeiconsIcon
+                              icon={ArrowDown01Icon}
+                              strokeWidth={2}
+                              className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/spend:rotate-180"
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {canViewTransactions && (
+                                <SidebarMenuSubItem>
+                                  <SidebarMenuSubButton
+                                    render={<Link href="/transactions" />}
+                                    data-active={pathname.startsWith("/transactions")}
+                                  >
+                                    <span>All</span>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              )}
+                              {canViewCards && (
+                                <SidebarMenuSubItem>
+                                  <SidebarMenuSubButton
+                                    render={<Link href="/cards" />}
+                                    data-active={pathname.startsWith("/cards")}
+                                  >
+                                    <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                                    <span>Cards</span>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              )}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {(canViewReimbursements || canViewBills) && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Finance</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {canViewReimbursements && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            render={<Link href="/reimbursements" />}
+                            data-active={pathname.startsWith("/reimbursements")}
+                            tooltip="Reimbursements"
+                          >
+                            <HugeiconsIcon icon={MoneyReceiveSquareIcon} strokeWidth={2} />
+                            <span>Reimbursements</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {canViewBills && (
+                        <>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              render={<Link href="/bills" />}
+                              data-active={pathname.startsWith("/bills")}
+                              tooltip="Bill Pay"
+                            >
+                              <HugeiconsIcon icon={Invoice01Icon} strokeWidth={2} />
+                              <span>Bill Pay</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              render={<Link href="/invoices" />}
+                              data-active={pathname.startsWith("/invoices")}
+                              tooltip="Invoices"
+                            >
+                              <HugeiconsIcon icon={InvoiceIcon} strokeWidth={2} />
+                              <span>Invoices</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </>
+                      )}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              <SidebarGroup>
+                <SidebarGroupLabel>Workforce</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<Link href="/workforce/hire" />}
+                        data-active={pathname.startsWith("/workforce/hire")}
+                        tooltip="Hire"
+                      >
+                        <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} />
+                        <span>Hire</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<Link href="/workforce/onboard" />}
+                        data-active={pathname.startsWith("/workforce/onboard")}
+                        tooltip="Onboard"
+                      >
+                        <HugeiconsIcon icon={Login01Icon} strokeWidth={2} />
+                        <span>Onboard</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {canViewIntegrations && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Integrations</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <Collapsible defaultOpen className="group/integrations">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger
+                            nativeButton={false}
+                            render={
+                              <span
+                                data-slot="sidebar-menu-button"
+                                data-sidebar="menu-button"
+                                data-size="default"
+                                data-active={pathname.startsWith("/integrations")}
+                                className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
+                                tabIndex={0}
+                                role="button"
+                              />
+                            }
+                          >
+                            <HugeiconsIcon icon={Share08Icon} strokeWidth={2} />
+                            <span>Integrations</span>
+                            <HugeiconsIcon
+                              icon={ArrowDown01Icon}
+                              strokeWidth={2}
+                              className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/integrations:rotate-180"
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/integrations/api" />}
+                                  data-active={pathname.startsWith("/integrations/api")}
+                                >
+                                  <HugeiconsIcon icon={CodeIcon} strokeWidth={2} />
+                                  <span>API</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/integrations/link" />}
+                                  data-active={pathname.startsWith("/integrations/link")}
+                                >
+                                  <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
+                                  <span>Link</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/integrations/automations" />}
+                                  data-active={pathname.startsWith("/integrations/automations")}
+                                >
+                                  <HugeiconsIcon icon={FlowCircleIcon} strokeWidth={2} />
+                                  <span>Automations</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {isCorporateOwner && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Company</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<Link href="/company/members" />}
+                          data-active={pathname.startsWith("/company/members")}
+                          tooltip="Members"
+                        >
+                          <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
+                          <span>Members</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<Link href="/company/cards" />}
+                          data-active={pathname.startsWith("/company/cards")}
+                          tooltip="Company Cards"
+                        >
+                          <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                          <span>Cards</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<Link href="/company/settings" />}
+                          data-active={pathname.startsWith("/company/settings")}
+                          tooltip="Company Settings"
+                        >
+                          <HugeiconsIcon icon={Building01Icon} strokeWidth={2} />
+                          <span>Company Settings</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+            </>
           )}
         </SidebarContent>
 
@@ -482,6 +628,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
+            {!isLanding && <AskDeltraPanel />}
           </div>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-8">

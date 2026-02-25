@@ -30,31 +30,31 @@ async function seed() {
     .values([
       {
         name: "Alex Johnson",
-        email: "alex@upside.com",
+        email: "alex@deltra.com",
         role: "admin",
         department: "Engineering",
       },
       {
         name: "Sarah Chen",
-        email: "sarah@upside.com",
+        email: "sarah@deltra.com",
         role: "manager",
         department: "Marketing",
       },
       {
         name: "Marcus Williams",
-        email: "marcus@upside.com",
+        email: "marcus@deltra.com",
         role: "employee",
         department: "Sales",
       },
       {
         name: "Priya Patel",
-        email: "priya@upside.com",
+        email: "priya@deltra.com",
         role: "employee",
         department: "Engineering",
       },
       {
         name: "Jordan Lee",
-        email: "jordan@upside.com",
+        email: "jordan@deltra.com",
         role: "manager",
         department: "Finance",
       },

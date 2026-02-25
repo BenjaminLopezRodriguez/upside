@@ -67,6 +67,7 @@ export function SettingsView() {
   const org = activeMembership?.organization;
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const utils = api.useUtils();
 
   const [companyName, setCompanyName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -81,6 +82,36 @@ export function SettingsView() {
 
   const updateOrg = api.organization.updateOrg.useMutation({
     onSuccess: () => toast.success("Company settings saved."),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const leaveOrg = api.organization.leaveOrg.useMutation({
+    onSuccess: () => {
+      toast.success("You have left the organization.");
+      void utils.organization.listMyOrgs.invalidate();
+      localStorage.setItem("deltra-mode", "personal");
+      localStorage.setItem("deltra-active-org", "");
+      window.location.href = "/";
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteOrg = api.organization.deleteOrg.useMutation({
+    onSuccess: () => {
+      toast.success("Organization deleted.");
+      void utils.organization.listMyOrgs.invalidate();
+      localStorage.setItem("deltra-mode", "personal");
+      localStorage.setItem("deltra-active-org", "");
+      window.location.href = "/";
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteAccount = api.user.deleteAccount.useMutation({
+    onSuccess: () => {
+      toast.success("Account deleted. Signing out…");
+      window.location.href = "/api/auth/logout";
+    },
     onError: (err) => toast.error(err.message),
   });
 
@@ -184,7 +215,7 @@ export function SettingsView() {
                 Integrations
               </CardTitle>
               <CardDescription>
-                Connect apps and services to Upside.
+                Connect apps and services to Deltra.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -259,7 +290,7 @@ export function SettingsView() {
                 {mounted ? (
                   <Select
                     value={resolvedTheme ?? "system"}
-                    onValueChange={(v) => setTheme(v)}
+                    onValueChange={(v) => setTheme(v ?? "system")}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Theme" />
@@ -385,9 +416,12 @@ export function SettingsView() {
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         variant="destructive"
-                        onClick={() => toast.info("Leave organization not yet implemented.")}
+                        disabled={leaveOrg.isPending}
+                        onClick={() =>
+                          activeOrgId != null && leaveOrg.mutate({ orgId: activeOrgId })
+                        }
                       >
-                        Leave
+                        {leaveOrg.isPending ? "Leaving…" : "Leave"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -427,9 +461,12 @@ export function SettingsView() {
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         variant="destructive"
-                        onClick={() => toast.info("Delete organization not yet implemented.")}
+                        disabled={deleteOrg.isPending}
+                        onClick={() =>
+                          org != null && deleteOrg.mutate({ orgId: org.id })
+                        }
                       >
-                        Delete organization
+                        {deleteOrg.isPending ? "Deleting…" : "Delete organization"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -464,15 +501,16 @@ export function SettingsView() {
                       Your account and all associated data will be permanently removed. This cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() => toast.info("Delete account not yet implemented.")}
-                    >
-                      Delete account
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        variant="destructive"
+                        disabled={deleteAccount.isPending}
+                        onClick={() => deleteAccount.mutate()}
+                      >
+                        {deleteAccount.isPending ? "Deleting…" : "Delete account"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </CardContent>

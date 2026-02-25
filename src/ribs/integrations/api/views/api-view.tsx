@@ -69,7 +69,7 @@ export function ApiIntegrationView() {
     <div className="animate-page-in space-y-8">
       <PageHeader
         title="API"
-        description="Connect your backend to Upside. Manage API keys, configure webhooks, and monitor requests."
+        description="Connect your backend to Deltra. Manage API keys, configure webhooks, and monitor requests."
         actions={
           <>
             <Button variant="outline" onClick={vm.openAddWebhook}>
@@ -155,25 +155,25 @@ export function ApiIntegrationView() {
         <CardContent className="space-y-3">
           <CodeBlock
             label="Approve a transaction"
-            code={`curl -X POST https://api.upside.com/v1/transactions/tx_9x2/approve \\
+            code={`curl -X POST https://api.deltra.com/v1/transactions/tx_9x2/approve \\
   -H "Authorization: Bearer upsd_live_k3m9••••" \\
   -H "Content-Type: application/json" \\
   -d '{"memo": "Approved by finance team"}'`}
             onCopy={() =>
               vm.copyToClipboard(
-                `curl -X POST https://api.upside.com/v1/transactions/tx_9x2/approve`,
+                `curl -X POST https://api.deltra.com/v1/transactions/tx_9x2/approve`,
                 "Code snippet",
               )
             }
           />
           <CodeBlock
             label="Create a rule via API"
-            code={`curl -X POST https://api.upside.com/v1/rules \\
+            code={`curl -X POST https://api.deltra.com/v1/rules \\
   -H "Authorization: Bearer upsd_live_k3m9••••" \\
   -d '{"trigger":"spend_exceeds","threshold":5000,"action":"require_approval"}'`}
             onCopy={() =>
               vm.copyToClipboard(
-                `curl -X POST https://api.upside.com/v1/rules`,
+                `curl -X POST https://api.deltra.com/v1/rules`,
                 "Code snippet",
               )
             }
@@ -678,7 +678,7 @@ function AddWebhookDialog({
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://api.yourapp.com/webhooks/upside"
+              placeholder="https://api.yourapp.com/webhooks/deltra"
               type="url"
               required
             />

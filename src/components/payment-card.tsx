@@ -49,7 +49,7 @@ export function PaymentCard({
       className={cn(
         "relative w-full overflow-hidden rounded-lg aspect-[1.586]",
         bgClass,
-        "shadow-[inset_0px_9px_27px_-4px_rgba(255,_255,_255,_0.4),0px_0px_27px_-4px_rgba(0,_0,_0,_0.1)] [&_*]:text-black",
+        "[&_*]:text-black",
         status === "cancelled" && "opacity-50",
         onClick &&
           "cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",

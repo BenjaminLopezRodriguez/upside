@@ -73,7 +73,7 @@ const INITIAL_KEYS: ApiKey[] = [
 const INITIAL_WEBHOOKS: Webhook[] = [
   {
     id: "1",
-    url: "https://api.acme.com/webhooks/upside",
+    url: "https://api.acme.com/webhooks/deltra",
     events: ["transaction.created", "transaction.declined", "card.frozen"],
     status: "active",
     createdAt: "2025-11-05",

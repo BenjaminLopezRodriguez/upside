@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { httpBatchStreamLink, loggerLink } from "@trpc/client";
+import { httpBatchStreamLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
@@ -44,11 +44,8 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
   const [trpcClient] = useState(() =>
     api.createClient({
       links: [
-        loggerLink({
-          // Only log when the server returns an error (avoids noisy "query #N" for every request)
-          enabled: (op) =>
-            op.direction === "down" && op.result instanceof Error,
-        }),
+        // Disabled: loggerLink was printing noisy "[[ << query #N ] procedure {}" on errors.
+        // Re-enable for debugging: loggerLink({ enabled: () => true }),
         httpBatchStreamLink({
           transformer: SuperJSON,
           url: getBaseUrl() + "/api/trpc",

@@ -65,6 +65,18 @@ export const webhookStatusEnum = pgEnum("upside_webhook_status", [
   "disabled",
 ]);
 
+export const roleStatusEnum = pgEnum("upside_role_status", [
+  "draft",
+  "open",
+  "closed",
+]);
+
+export const cardRequestStatusEnum = pgEnum("upside_card_request_status", [
+  "pending",
+  "issued",
+  "denied",
+]);
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -98,6 +110,8 @@ export const cards = createTable(
       .integer()
       .notNull()
       .references(() => users.id),
+    /** When set, this card was issued to the user by an organization (personal view shows only these). */
+    organizationId: d.integer().references(() => organizations.id),
     last4: d.varchar({ length: 4 }).notNull(),
     cardName: d.varchar({ length: 256 }).notNull(),
     type: cardTypeEnum().notNull().default("virtual"),
@@ -107,12 +121,43 @@ export const cards = createTable(
     cardColor: d.varchar({ length: 32 }),
     logoUrl: d.varchar({ length: 512 }),
     material: d.varchar({ length: 32 }),
+    /** Lithic card token for wallet provisioning (Apple Pay / Google Pay). Null if card was created without Lithic. */
+    lithicCardToken: d.varchar({ length: 64 }),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (t) => [index("card_user_idx").on(t.userId)],
+  (t) => [
+    index("card_user_idx").on(t.userId),
+    index("card_org_idx").on(t.organizationId),
+  ],
+);
+
+export const cardRequests = createTable(
+  "card_request",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    organizationId: d
+      .integer()
+      .notNull()
+      .references(() => organizations.id),
+    status: cardRequestStatusEnum().notNull().default("pending"),
+    requestedAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    processedAt: d.timestamp({ withTimezone: true }),
+    processedBy: d.integer().references(() => users.id),
+  }),
+  (t) => [
+    index("card_request_user_idx").on(t.userId),
+    index("card_request_org_idx").on(t.organizationId),
+  ],
 );
 
 export const merchants = createTable("merchant", (d) => ({
@@ -296,6 +341,37 @@ export const organizations = createTable(
   ],
 );
 
+export const roles = createTable(
+  "role",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    organizationId: d
+      .integer()
+      .notNull()
+      .references(() => organizations.id),
+    createdBy: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    title: d.varchar({ length: 256 }).notNull(),
+    description: d.text().notNull(),
+    department: d.varchar({ length: 128 }),
+    location: d.varchar({ length: 256 }),
+    status: roleStatusEnum().notNull().default("open"),
+    /** Job board names this role was posted to (e.g. LinkedIn, Indeed). */
+    postedTo: text("posted_to").array().notNull().default(sql`'{}'::text[]`),
+    postedAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("role_org_idx").on(t.organizationId),
+    index("role_created_by_idx").on(t.createdBy),
+  ],
+);
+
 export const organizationMembers = createTable(
   "organization_member",
   (d) => ({
@@ -332,6 +408,17 @@ export const organizationMembers = createTable(
 // Relations
 // ---------------------------------------------------------------------------
 
+export const rolesRelations = relations(roles, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [roles.organizationId],
+    references: [organizations.id],
+  }),
+  createdByUser: one(users, {
+    fields: [roles.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ many }) => ({
   cards: many(cards),
   transactions: many(transactions),
@@ -342,10 +429,28 @@ export const usersRelations = relations(users, ({ many }) => ({
   webhooks: many(webhooks),
   ownedOrganizations: many(organizations),
   organizationMemberships: many(organizationMembers),
+  rolesCreated: many(roles),
+  cardRequests: many(cardRequests),
+}));
+
+export const cardRequestsRelations = relations(cardRequests, ({ one }) => ({
+  user: one(users, { fields: [cardRequests.userId], references: [users.id] }),
+  organization: one(organizations, {
+    fields: [cardRequests.organizationId],
+    references: [organizations.id],
+  }),
+  processedByUser: one(users, {
+    fields: [cardRequests.processedBy],
+    references: [users.id],
+  }),
 }));
 
 export const cardsRelations = relations(cards, ({ one, many }) => ({
   user: one(users, { fields: [cards.userId], references: [users.id] }),
+  organization: one(organizations, {
+    fields: [cards.organizationId],
+    references: [organizations.id],
+  }),
   transactions: many(transactions),
 }));
 
@@ -402,6 +507,9 @@ export const organizationsRelations = relations(organizations, ({ one, many }) =
   owner: one(users, { fields: [organizations.ownerId], references: [users.id] }),
   members: many(organizationMembers),
   reimbursements: many(reimbursements),
+  roles: many(roles),
+  cardRequests: many(cardRequests),
+  issuedCards: many(cards),
 }));
 
 export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({

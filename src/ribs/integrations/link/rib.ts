@@ -26,7 +26,7 @@ export type CreateLinkData = {
   expiresAt: string | null;
 };
 
-const BASE_URL = "https://links.upside.com";
+const BASE_URL = "https://links.deltra.com";
 
 const INITIAL_LINKS: IntegrationLink[] = [
   {

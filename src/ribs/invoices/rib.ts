@@ -36,7 +36,7 @@ export type CreateInvoiceData = {
   sendNow: boolean;
 };
 
-const BASE_LINK = "https://pay.upside.com/inv";
+const BASE_LINK = "https://pay.deltra.com/inv";
 
 const INITIAL_INVOICES: Invoice[] = [
   {

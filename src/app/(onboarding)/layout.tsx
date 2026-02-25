@@ -6,7 +6,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       <div className="mb-10">
         <Image
           src="/logo.svg"
-          alt="Upside"
+          alt="Deltra"
           width={108}
           height={29}
           className="dark:invert"

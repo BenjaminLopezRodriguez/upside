@@ -3,7 +3,12 @@ import { and, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedureWithUser } from "@/server/api/trpc";
-import { organizations, organizationMembers } from "@/server/db/schema";
+import {
+  cardRequests,
+  organizations,
+  organizationMembers,
+  reimbursements,
+} from "@/server/db/schema";
 
 export const organizationRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
@@ -41,6 +46,57 @@ export const organizationRouter = createTRPCRouter({
         with: { user: true },
       });
     }),
+
+  /**
+   * Summary for personal dashboard: orgs the user belongs to (corporate only)
+   * with counts of pending reimbursements and whether user has a pending card request.
+   */
+  getPersonalFromOrgs: protectedProcedureWithUser.query(async ({ ctx }) => {
+    const memberships = await ctx.db.query.organizationMembers.findMany({
+      where: eq(organizationMembers.userId, ctx.dbUser.id),
+      with: { organization: true },
+    });
+
+    const corporate = memberships.filter((m) => m.organization.type === "corporate");
+    if (corporate.length === 0) return [];
+
+    const orgIds = corporate.map((m) => m.organization.id);
+
+    const pendingReimbs = await ctx.db
+      .select({ orgId: reimbursements.orgId })
+      .from(reimbursements)
+      .where(
+        and(
+          eq(reimbursements.userId, ctx.dbUser.id),
+          eq(reimbursements.status, "pending"),
+        ),
+      );
+
+    const reimbByOrg = new Map<number, number>();
+    for (const r of pendingReimbs) {
+      if (r.orgId != null) {
+        reimbByOrg.set(r.orgId, (reimbByOrg.get(r.orgId) ?? 0) + 1);
+      }
+    }
+
+    const myPendingRequests = await ctx.db.query.cardRequests.findMany({
+      where: and(
+        eq(cardRequests.userId, ctx.dbUser.id),
+        eq(cardRequests.status, "pending"),
+      ),
+      columns: { organizationId: true },
+    });
+    const orgIdsWithPendingRequest = new Set(myPendingRequests.map((r) => r.organizationId));
+
+    return corporate.map((m) => ({
+      id: m.organization.id,
+      name: m.organization.name,
+      logoUrl: m.organization.logoUrl,
+      role: m.role,
+      pendingReimbursements: reimbByOrg.get(m.organization.id) ?? 0,
+      hasPendingCardRequest: orgIdsWithPendingRequest.has(m.organization.id),
+    }));
+  }),
 
   /**
    * Search orgs by name (case-insensitive), excluding orgs the user already
@@ -251,5 +307,55 @@ export const organizationRouter = createTRPCRouter({
             eq(organizationMembers.organizationId, org.id),
           ),
         );
+    }),
+
+  /**
+   * Leave an organization. Caller must be a member but not the owner; owners
+   * must delete the organization or transfer ownership first.
+   */
+  leaveOrg: protectedProcedureWithUser
+    .input(z.object({ orgId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await ctx.db.query.organizationMembers.findFirst({
+        where: and(
+          eq(organizationMembers.organizationId, input.orgId),
+          eq(organizationMembers.userId, ctx.dbUser.id),
+        ),
+      });
+      if (!membership) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Not a member of this organization" });
+      }
+      if (membership.role === "owner") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Owners must delete the organization or transfer ownership before leaving.",
+        });
+      }
+      await ctx.db
+        .delete(organizationMembers)
+        .where(eq(organizationMembers.id, membership.id));
+    }),
+
+  /**
+   * Permanently delete an organization. Caller must be the owner. Removes all
+   * members, reimbursements, and the organization record.
+   */
+  deleteOrg: protectedProcedureWithUser
+    .input(z.object({ orgId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const org = await ctx.db.query.organizations.findFirst({
+        where: and(
+          eq(organizations.id, input.orgId),
+          eq(organizations.ownerId, ctx.dbUser.id),
+        ),
+      });
+      if (!org) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not the organization owner" });
+      }
+      await ctx.db.delete(reimbursements).where(eq(reimbursements.orgId, org.id));
+      await ctx.db
+        .delete(organizationMembers)
+        .where(eq(organizationMembers.organizationId, org.id));
+      await ctx.db.delete(organizations).where(eq(organizations.id, org.id));
     }),
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { InvoicesRib, formatCents } from "../rib";
 import type { Invoice, InvoiceStatus, CreateInvoiceData, InvoiceLineItem } from "../rib";
 import { PageHeader } from "@/components/page-header";
@@ -65,8 +65,6 @@ import {
   Copy01Icon,
   Delete01Icon,
   CheckmarkCircle02Icon,
-  Alert02Icon,
-  Clock01Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
@@ -133,25 +131,24 @@ export function InvoicesView() {
       />
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
+      <div className="flex flex-wrap items-baseline gap-y-3 py-4">
+        <StatSegment
           label="Outstanding"
           value={vm.totalOutstanding}
-          icon={Clock01Icon}
-          className="animate-page-in stagger-1"
+          className="animate-page-in stagger-1 min-w-0 flex-1"
         />
-        <StatCard
+        <Separator orientation="vertical" className="h-8 shrink-0" />
+        <StatSegment
           label="Collected"
           value={vm.totalPaid}
-          icon={CheckmarkCircle02Icon}
-          className="animate-page-in stagger-2"
+          className="animate-page-in stagger-2 min-w-0 flex-1"
         />
-        <StatCard
+        <Separator orientation="vertical" className="h-8 shrink-0" />
+        <StatSegment
           label="Overdue"
           value={String(vm.overdueCount)}
-          icon={Alert02Icon}
           highlight={vm.overdueCount > 0}
-          className="animate-page-in stagger-3"
+          className="animate-page-in stagger-3 min-w-0 flex-1"
         />
       </div>
 
@@ -195,7 +192,7 @@ export function InvoicesView() {
                 </EmptyMedia>
                 <EmptyTitle>No invoices</EmptyTitle>
                 <EmptyDescription>
-                  Create your first invoice and send it directly from Upside.
+                  Create your first invoice and send it directly from Deltra.
                 </EmptyDescription>
               </EmptyHeader>
               <Button onClick={vm.openCreate}>
@@ -266,49 +263,29 @@ export function InvoicesView() {
   );
 }
 
-function StatCard({
+function StatSegment({
   label,
   value,
-  icon: Icon,
   highlight,
   className,
 }: {
   label: string;
   value: string;
-  icon: IconSvgElement;
   highlight?: boolean;
   className?: string;
 }) {
   return (
-    <Card
-      className={cn(
-        "transition-[box-shadow,transform] duration-200 ease-[var(--ease-out-smooth)] hover:shadow-[0_4px_12px_0_rgb(0_0_0/0.06),0_1px_3px_0_rgb(0_0_0/0.04)] dark:hover:shadow-[0_4px_16px_0_rgb(0_0_0/0.3),0_1px_4px_0_rgb(0_0_0/0.2)] hover:-translate-y-0.5",
-        className,
-      )}
-    >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardDescription>{label}</CardDescription>
-        <span
-          className={cn(
-            "text-muted-foreground",
-            highlight && "text-destructive",
-          )}
-          aria-hidden="true"
-        >
-          <HugeiconsIcon icon={Icon} className="size-5" strokeWidth={1.5} />
-        </span>
-      </CardHeader>
-      <CardContent>
-        <p
-          className={cn(
-            "text-2xl font-bold tracking-tight tabular-nums",
-            highlight && "text-destructive",
-          )}
-        >
-          {value}
-        </p>
-      </CardContent>
-    </Card>
+    <div className={cn("flex flex-col gap-0.5 pl-4 first:pl-0", className)}>
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <span
+        className={cn(
+          "text-2xl font-bold tracking-tight tabular-nums",
+          highlight && "text-destructive",
+        )}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 

@@ -5,14 +5,19 @@ import { createRib } from "nextjs-ribs";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
 
+export type CardsRibDeps = { inPersonal?: boolean };
+
 export const CardsRib = createRib({
   name: "Cards",
 
-  interactor: (_deps: Record<string, never>) => {
+  interactor: (deps: CardsRibDeps) => {
+    const inPersonal = deps.inPersonal ?? false;
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    const list = api.card.list.useQuery();
+    const listAll = api.card.list.useQuery(undefined, { enabled: !inPersonal });
+    const listIssued = api.card.listIssuedToMe.useQuery(undefined, { enabled: inPersonal });
+    const list = inPersonal ? listIssued : listAll;
     const detail = api.card.getById.useQuery(
       { id: selectedId! },
       { enabled: selectedId !== null },
@@ -23,6 +28,7 @@ export const CardsRib = createRib({
     const createCard = api.card.create.useMutation({
       onSuccess: () => {
         void utils.card.list.invalidate();
+        if (inPersonal) void utils.card.listIssuedToMe.invalidate();
         setIsCreating(false);
         toast.success("Card created");
       },
@@ -34,6 +40,7 @@ export const CardsRib = createRib({
     const freezeCard = api.card.freeze.useMutation({
       onSuccess: () => {
         void utils.card.list.invalidate();
+        if (inPersonal) void utils.card.listIssuedToMe.invalidate();
         void utils.card.getById.invalidate();
         toast.success("Card frozen");
       },
@@ -45,6 +52,7 @@ export const CardsRib = createRib({
     const cancelCard = api.card.cancel.useMutation({
       onSuccess: () => {
         void utils.card.list.invalidate();
+        if (inPersonal) void utils.card.listIssuedToMe.invalidate();
         void utils.card.getById.invalidate();
         setSelectedId(null);
         toast.success("Card cancelled");
@@ -54,7 +62,21 @@ export const CardsRib = createRib({
       },
     });
 
+    const deleteCard = api.card.delete.useMutation({
+      onSuccess: () => {
+        void utils.card.list.invalidate();
+        if (inPersonal) void utils.card.listIssuedToMe.invalidate();
+        void utils.card.getById.invalidate();
+        setSelectedId(null);
+        toast.success("Card deleted");
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to delete card");
+      },
+    });
+
     return {
+      inPersonal,
       cards: list.data ?? [],
       isLoading: list.isLoading,
       refetch: list.refetch,
@@ -66,6 +88,7 @@ export const CardsRib = createRib({
       createCard,
       freezeCard,
       cancelCard,
+      deleteCard,
     };
   },
 
@@ -76,6 +99,7 @@ export const CardsRib = createRib({
 
   presenter: (state) => ({
     ...state,
+    inPersonal: state.inPersonal,
     cardList: state.cards.map((c) => ({
       id: c.id,
       name: c.cardName,
@@ -102,5 +126,6 @@ export const CardsRib = createRib({
     }) => state.createCard.mutate(data),
     handleFreeze: (id: number) => state.freezeCard.mutate({ id }),
     handleCancel: (id: number) => state.cancelCard.mutate({ id }),
+    handleDelete: (id: number) => state.deleteCard.mutate({ id }),
   }),
 });

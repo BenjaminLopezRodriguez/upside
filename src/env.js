@@ -21,6 +21,9 @@ export const env = createEnv({
       .url()
       .default("http://localhost:3000"),
     UPLOADTHING_TOKEN: z.string().min(1).optional(),
+    LITHIC_API_KEY: z.string().min(1).optional(),
+    LITHIC_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+    OPENAI_API_KEY: z.string().min(1).optional(),
   },
 
   /**
@@ -29,7 +32,8 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    /** Lithic's Apple Pay partner ID for Web Push Provisioning (from Lithic / Apple). */
+    NEXT_PUBLIC_LITHIC_APPLE_PARTNER_ID: z.string().min(1).optional(),
   },
 
   /**
@@ -46,6 +50,11 @@ export const env = createEnv({
     KINDE_POST_LOGOUT_REDIRECT_URL: process.env.KINDE_POST_LOGOUT_REDIRECT_URL,
     KINDE_POST_LOGIN_REDIRECT_URL: process.env.KINDE_POST_LOGIN_REDIRECT_URL,
     UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+    LITHIC_API_KEY: process.env.LITHIC_API_KEY,
+    LITHIC_ENVIRONMENT: process.env.LITHIC_ENVIRONMENT,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    NEXT_PUBLIC_LITHIC_APPLE_PARTNER_ID:
+      process.env.NEXT_PUBLIC_LITHIC_APPLE_PARTNER_ID,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

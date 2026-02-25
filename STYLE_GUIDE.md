@@ -1,4 +1,4 @@
-# Upside Style Guide
+# Deltra Style Guide
 
 Reference for building new components that match the existing design system. Copy patterns directly from this file.
 

@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Upside",
+  title: "Deltra",
   description: "Spend management and bill pay",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };

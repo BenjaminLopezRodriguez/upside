@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
@@ -120,7 +120,7 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
       {mode === "org" && activeMembership && (
         <button
           onClick={() => setSelectorOpen(true)}
-          className="mt-0.5 flex w-auto shrink-0 items-center gap-1 rounded-md border border-border/60 bg-sidebar-accent/40 px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/70 sm:mt-1 sm:w-full sm:gap-2 sm:px-2.5 sm:py-2"
+          className="mt-0.5 flex w-auto max-w-[13rem] shrink-0 items-center gap-1 rounded-md border border-border/60 bg-sidebar-accent/40 px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/70 sm:mt-1"
           aria-label={`${activeMembership.organization.name}, ${activeMembership.role}. Switch organization`}
         >
           <div className="flex size-6 shrink-0 items-center justify-center rounded bg-primary/15 text-primary">
@@ -135,11 +135,11 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
               <HugeiconsIcon icon={Building01Icon} className="size-3.5" strokeWidth={2} />
             )}
           </div>
-          <div className="hidden min-w-0 flex-1 sm:block">
+          <div className="hidden min-w-0 max-w-[7rem] shrink sm:block">
             <p className="truncate text-xs font-medium leading-tight">
               {activeMembership.organization.name}
             </p>
-            <p className="text-[10px] capitalize leading-tight text-muted-foreground">
+            <p className="truncate text-[10px] capitalize leading-tight text-muted-foreground">
               {activeMembership.role}
             </p>
           </div>
@@ -194,10 +194,16 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
 
 // ─── Org selector ────────────────────────────────────────────────────────────
 
+type OrgFilter = "owned" | "member";
+
 interface OrgSelectorDialogProps {
   open: boolean;
   onClose: () => void;
-  orgs: Array<{ id: number; organization: { id: number; name: string; logoUrl: string | null; type: string } }>;
+  orgs: Array<{
+    id: number;
+    role: string;
+    organization: { id: number; name: string; logoUrl: string | null; type: string };
+  }>;
   activeOrgId: number | null;
   onSelectOrg: (id: number) => void;
   onCreateNew: () => void;
@@ -211,6 +217,25 @@ function OrgSelectorDialog({
   onSelectOrg,
   onCreateNew,
 }: OrgSelectorDialogProps) {
+  const [filter, setFilter] = useState<OrgFilter>("owned");
+  const [memberSearch, setMemberSearch] = useState("");
+
+  useEffect(() => {
+    if (filter === "owned") setMemberSearch("");
+  }, [filter]);
+
+  const filteredOrgs =
+    filter === "owned"
+      ? orgs.filter((m) => m.role === "owner")
+      : orgs.filter((m) => m.role !== "owner");
+
+  const displayedOrgs =
+    filter === "member" && memberSearch.trim()
+      ? filteredOrgs.filter((m) =>
+          m.organization.name.toLowerCase().includes(memberSearch.trim().toLowerCase()),
+        )
+      : filteredOrgs;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
@@ -218,13 +243,45 @@ function OrgSelectorDialog({
           <DialogTitle>Switch organization</DialogTitle>
           <DialogDescription>Select an organization to manage.</DialogDescription>
         </DialogHeader>
+
+        <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">
+          <button
+            type="button"
+            onClick={() => setFilter("owned")}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              filter === "owned"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            I own
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("member")}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              filter === "member"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            I&apos;m a member
+          </button>
+        </div>
+
         <div className="flex flex-col gap-1 py-1">
-          {orgs.length === 0 ? (
+          {displayedOrgs.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              No organizations yet.
+              {filter === "owned"
+                ? "You don't own any organizations yet."
+                : filteredOrgs.length === 0
+                  ? "You're not a member of any other organizations."
+                  : "No organizations match your search."}
             </p>
           ) : (
-            orgs.map((m) => (
+            displayedOrgs.map((m) => (
               <button
                 key={m.organization.id}
                 onClick={() => onSelectOrg(m.organization.id)}
@@ -257,13 +314,29 @@ function OrgSelectorDialog({
           )}
         </div>
         <div className="border-t pt-3">
-          <button
-            onClick={onCreateNew}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
-            Create new organization
-          </button>
+          {filter === "owned" ? (
+            <button
+              onClick={onCreateNew}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
+              Create new organization
+            </button>
+          ) : (
+            <div className="relative">
+              <HugeiconsIcon
+                icon={SearchIcon}
+                className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                strokeWidth={2}
+              />
+              <Input
+                placeholder="Search organizations…"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
