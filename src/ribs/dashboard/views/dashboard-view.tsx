@@ -394,6 +394,11 @@ export function DashboardView() {
               {vm.pendingReimbursements}{" "}
               <span className="text-xl font-medium text-muted-foreground">pending</span>
             </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {inPersonal
+                ? "Pending reimbursements from your organizations"
+                : "Your pending reimbursements"}
+            </p>
           </div>
           <Link
             href="/reimbursements"

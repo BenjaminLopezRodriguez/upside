@@ -129,10 +129,6 @@ export default function CompanyCardsPage() {
   const utils = api.useUtils();
   const [approvingRequest, setApprovingRequest] = useState<CardRequest | null>(null);
 
-  if (mode === "personal" || activeOrgId == null) {
-    return <OrgRequiredEmptyState />;
-  }
-
   const { data: cards, isLoading } = api.card.listForOrg.useQuery(
     { orgId: activeOrgId! },
     { enabled: activeOrgId != null },
@@ -150,6 +146,10 @@ export default function CompanyCardsPage() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  if (mode === "personal" || activeOrgId == null) {
+    return <OrgRequiredEmptyState />;
+  }
 
   return (
     <div className="space-y-6 py-6">
