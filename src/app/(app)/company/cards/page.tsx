@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { CreditCardIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { api } from "@/trpc/react";
 import { useOrg } from "@/contexts/org-context";
+import { OrgRequiredEmptyState } from "@/components/org-required-empty-state";
 import { PaymentCard } from "@/components/payment-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -124,9 +125,13 @@ function ApproveRequestDialog({
 }
 
 export default function CompanyCardsPage() {
-  const { activeOrgId } = useOrg();
+  const { activeOrgId, mode } = useOrg();
   const utils = api.useUtils();
   const [approvingRequest, setApprovingRequest] = useState<CardRequest | null>(null);
+
+  if (mode === "personal" || activeOrgId == null) {
+    return <OrgRequiredEmptyState />;
+  }
 
   const { data: cards, isLoading } = api.card.listForOrg.useQuery(
     { orgId: activeOrgId! },

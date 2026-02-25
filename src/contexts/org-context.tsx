@@ -16,12 +16,15 @@ interface OrgContextValue {
   activeOrgId: number | null;
   /** Full membership row (with nested .organization) for the currently active org, or null. */
   activeMembership: OrgMembership | null;
+  /** True when in org mode and the current membership role is "owner". */
+  isOrgOwner: boolean;
 }
 
 export const OrgContext = createContext<OrgContextValue>({
   mode: "personal",
   activeOrgId: null,
   activeMembership: null,
+  isOrgOwner: false,
 });
 
 export const useOrg = () => useContext(OrgContext);

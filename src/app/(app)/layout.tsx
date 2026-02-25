@@ -449,33 +449,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarGroup>
               )}
 
-              <SidebarGroup>
-                <SidebarGroupLabel>Workforce</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        render={<Link href="/workforce/hire" />}
-                        data-active={pathname.startsWith("/workforce/hire")}
-                        tooltip="Hire"
-                      >
-                        <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} />
-                        <span>Hire</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        render={<Link href="/workforce/onboard" />}
-                        data-active={pathname.startsWith("/workforce/onboard")}
-                        tooltip="Onboard"
-                      >
-                        <HugeiconsIcon icon={Login01Icon} strokeWidth={2} />
-                        <span>Onboard</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              {isOrgOwner && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Workforce</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<Link href="/workforce/hire" />}
+                          data-active={pathname.startsWith("/workforce/hire")}
+                          tooltip="Hire"
+                        >
+                          <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} />
+                          <span>Hire</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<Link href="/workforce/onboard" />}
+                          data-active={pathname.startsWith("/workforce/onboard")}
+                          tooltip="Onboard"
+                        >
+                          <HugeiconsIcon icon={Login01Icon} strokeWidth={2} />
+                          <span>Onboard</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
 
               {canViewIntegrations && (
                 <SidebarGroup>
@@ -633,7 +635,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-8">
           <div className="mx-auto w-full max-w-6xl">
-            <OrgContext.Provider value={{ mode, activeOrgId, activeMembership }}>
+            <OrgContext.Provider value={{ mode, activeOrgId, activeMembership, isOrgOwner }}>
               {children}
             </OrgContext.Provider>
           </div>

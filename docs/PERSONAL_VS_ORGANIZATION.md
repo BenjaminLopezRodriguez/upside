@@ -117,4 +117,8 @@ If you want **personal** to behave more like “receiving and acting as simple i
 - **Layout**: Mode and activeOrgId in layout + OrgContext; sidebar and permission flags differ by mode and membership (owner vs member).
 - **Creating an org**: Already available via Org switcher → Organization → Create (or Create new in selector).
 - **Joining**: “Find an organization” (in personal mode) searches by name and joins as member.
-- **“Personal = receiving / simple interaction”**: Not fully reflected today; personal is “just me.” To align, you’d add a “from organizations” view in personal and/or redefine personal as “default org” and migrate data to org-scoping.
+- **”Personal = receiving / simple interaction”**: Not fully reflected today; personal is “just me.” To align, you’d add a “from organizations” view in personal and/or redefine personal as “default org” and migrate data to org-scoping.
+
+---
+
+For sidebar layout, mode-switching behavior, route guards, and permission rules see [PERSONAL_ORG_WORKFLOW.md](./PERSONAL_ORG_WORKFLOW.md).

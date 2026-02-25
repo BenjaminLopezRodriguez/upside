@@ -21,6 +21,7 @@ import { UploadDropzone } from "@/lib/uploadthing";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
 import { useOrg } from "@/contexts/org-context";
+import { OrgRequiredEmptyState } from "@/components/org-required-empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -332,12 +333,16 @@ function MemberRow({ member, orgId }: { member: Member; orgId: number }) {
 }
 
 export default function MembersPage() {
-  const { activeOrgId } = useOrg();
+  const { activeOrgId, mode } = useOrg();
 
   const { data: members, isLoading } = api.organization.listMembers.useQuery(
     { orgId: activeOrgId! },
     { enabled: activeOrgId != null },
   );
+
+  if (mode === "personal" || activeOrgId == null) {
+    return <OrgRequiredEmptyState />;
+  }
 
   return (
     <div className="space-y-6 py-6">

@@ -241,7 +241,7 @@ function OrgSelectorDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Switch organization</DialogTitle>
-          <DialogDescription>Select an organization to manage.</DialogDescription>
+          <DialogDescription>Select an organization to switch to.</DialogDescription>
         </DialogHeader>
 
         <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">

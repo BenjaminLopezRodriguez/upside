@@ -6,6 +6,7 @@ import { Building01Icon, ImageUploadIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
 import { useOrg } from "@/contexts/org-context";
+import { OrgRequiredEmptyState } from "@/components/org-required-empty-state";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function CompanySettingsPage() {
   // Use the active org from layout context — ensures we edit the org the user
   // is actually viewing, even if they own multiple orgs.
-  const { activeOrgId, activeMembership } = useOrg();
+  const { activeOrgId, activeMembership, mode } = useOrg();
   const org = activeMembership?.organization;
 
   const [name, setName] = useState("");
@@ -44,7 +45,11 @@ export default function CompanySettingsPage() {
     });
   };
 
-  const isLoading = activeOrgId == null || !activeMembership;
+  if (mode === "personal" || activeOrgId == null) {
+    return <OrgRequiredEmptyState />;
+  }
+
+  const isLoading = !activeMembership;
 
   return (
     <div className="space-y-6 py-6">
