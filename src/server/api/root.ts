@@ -7,6 +7,8 @@ import { billRouter } from "@/server/api/routers/bill";
 import { userRouter } from "@/server/api/routers/user";
 import { organizationRouter } from "@/server/api/routers/organization";
 import { roleRouter } from "@/server/api/routers/role";
+import { notificationRouter } from "@/server/api/routers/notification";
+import { messageRouter } from "./routers/message";
 
 export const appRouter = createTRPCRouter({
   dashboard: dashboardRouter,
@@ -17,6 +19,8 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   organization: organizationRouter,
   role: roleRouter,
+  notification: notificationRouter,
+  message: messageRouter,
 });
 
 export type AppRouter = typeof appRouter;

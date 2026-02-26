@@ -25,6 +25,11 @@ import {
   Login01Icon,
   Briefcase01Icon,
   GlobeIcon,
+  Message01Icon,
+  ShoppingCartCheckOut01Icon,
+  Cursor01Icon,
+  Store01Icon,
+  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
@@ -52,6 +57,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationPopover } from "@/components/notification-popover";
 import { AskDeltraPanel } from "@/components/ask-deltra-panel";
 import {
   Avatar,
@@ -94,6 +100,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // ── Org data (only when not on landing to avoid 401 + console error) ──
   const { data: myOrgs } = api.organization.listMyOrgs.useQuery(undefined, {
     enabled: !isLanding,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const activeMembership =
@@ -333,6 +341,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+
+              <SidebarGroup>
+                <SidebarGroupLabel>Messages</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<Link href="/messages" />}
+                        data-active={pathname.startsWith("/messages")}
+                        tooltip="Messages"
+                      >
+                        <HugeiconsIcon icon={Message01Icon} strokeWidth={2} />
+                        <span>Messages</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
             </>
           )}
 
@@ -389,8 +415,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     render={<Link href="/cards" />}
                                     data-active={pathname.startsWith("/cards")}
                                   >
-                                    <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
-                                    <span>Cards</span>
+                                    {isMember ? (
+                                      <>
+                                        <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} />
+                                        <span>Wallet</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+                                        <span>Cards</span>
+                                      </>
+                                    )}
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               )}
@@ -474,6 +509,73 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           <span>Onboard</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {isOrgOwner && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Inflow</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <Collapsible defaultOpen className="group/inflow">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger
+                            nativeButton={false}
+                            render={
+                              <span
+                                data-slot="sidebar-menu-button"
+                                data-sidebar="menu-button"
+                                data-size="default"
+                                data-active={pathname.startsWith("/inflow")}
+                                className="ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent gap-2 rounded-lg px-3 py-2 h-9 text-sm text-left transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium flex w-full items-center overflow-hidden outline-hidden cursor-pointer [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0"
+                                tabIndex={0}
+                                role="button"
+                              />
+                            }
+                          >
+                            <HugeiconsIcon icon={MoneyReceiveSquareIcon} strokeWidth={2} />
+                            <span>Inflow</span>
+                            <HugeiconsIcon
+                              icon={ArrowDown01Icon}
+                              strokeWidth={2}
+                              className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/inflow:rotate-180"
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/inflow/checkout" />}
+                                  data-active={pathname.startsWith("/inflow/checkout")}
+                                >
+                                  <HugeiconsIcon icon={ShoppingCartCheckOut01Icon} strokeWidth={2} />
+                                  <span>Checkout pages</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/inflow/buttons" />}
+                                  data-active={pathname.startsWith("/inflow/buttons")}
+                                >
+                                  <HugeiconsIcon icon={Cursor01Icon} strokeWidth={2} />
+                                  <span>Buttons</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  render={<Link href="/inflow/pos" />}
+                                  data-active={pathname.startsWith("/inflow/pos")}
+                                >
+                                  <HugeiconsIcon icon={Store01Icon} strokeWidth={2} />
+                                  <span>POS & menus</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -628,8 +730,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             activeOrgId={activeOrgId}
             onSelect={handleModeSelect}
           />
+          {isMember && (
+            <span className="hidden sm:inline-flex shrink-0 select-none items-center rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+              Viewing as member
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
+            <NotificationPopover />
             {!isLanding && <AskDeltraPanel />}
           </div>
         </header>

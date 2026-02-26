@@ -73,7 +73,9 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useOrg } from "@/contexts/org-context";
 import { env } from "@/env";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const typeOptions = [
   { label: "Virtual", value: "virtual" },
@@ -281,6 +283,7 @@ function CardStack({
 export function CardsView() {
   const vm = CardsRib.useViewModel();
   const utils = api.useUtils();
+  const { activeOrgId } = useOrg();
   const detailRoute = CardsRib.useRoute("detail");
   const createRoute = CardsRib.useRoute("createCard");
   const [requestCardOpen, setRequestCardOpen] = useState(false);
@@ -565,6 +568,7 @@ export function CardsView() {
           open={createRoute.attached}
           onClose={vm.closeCreate}
           onCreate={vm.handleCreate}
+          orgId={activeOrgId ?? null}
         />
       )}
 
@@ -923,6 +927,7 @@ function CreateCardDialog({
   open,
   onClose,
   onCreate,
+  orgId = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -934,36 +939,78 @@ function CreateCardDialog({
     logoUrl?: string;
     material?: string;
   }) => void;
+  orgId?: number | null;
 }) {
+  const utils = api.useUtils();
   const [name, setName] = useState("");
   const [type, setType] = useState<"virtual" | "physical">("virtual");
   const [limit, setLimit] = useState("5000");
   const [cardColor, setCardColor] = useState("lime");
   const [logoUrl, setLogoUrl] = useState("");
   const [material, setMaterial] = useState("plastic");
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onCreate({
-      cardName: name,
-      type,
-      spendLimit: Math.round(parseFloat(limit) * 100),
-      cardColor,
-      logoUrl: logoUrl.trim() || undefined,
-      material: type === "physical" ? material : undefined,
-    });
+  const { data: requests = [] } = api.card.listCardRequestsForOrg.useQuery(
+    { orgId: orgId! },
+    { enabled: open && orgId != null },
+  );
+
+  const resetForm = () => {
+    setSelectedRequestId(null);
     setName("");
     setLimit("5000");
+    setType("virtual");
     setCardColor("lime");
     setLogoUrl("");
     setMaterial("plastic");
+  };
+
+  const approveForRequest = api.card.approveCardRequestAndIssue.useMutation({
+    onSuccess: () => {
+      toast.success("Card issued");
+      void utils.card.list.invalidate();
+      void utils.card.listForOrg.invalidate();
+      void utils.card.listCardRequestsForOrg.invalidate();
+      onClose();
+      resetForm();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const spendLimit = Math.round(parseFloat(limit) * 100);
+    const payload = {
+      cardName: name,
+      type,
+      spendLimit,
+      cardColor,
+      logoUrl: logoUrl.trim() || undefined,
+      material: type === "physical" ? material : undefined,
+    };
+    if (selectedRequestId != null) {
+      approveForRequest.mutate({
+        requestId: selectedRequestId,
+        ...payload,
+      });
+    } else {
+      onCreate(payload);
+      setName("");
+      setLimit("5000");
+      setCardColor("lime");
+      setLogoUrl("");
+      setMaterial("plastic");
+    }
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
-        if (!o) onClose();
+        if (!o) {
+          resetForm();
+          onClose();
+        }
       }}
     >
       <DialogContent>
@@ -1004,16 +1051,61 @@ function CreateCardDialog({
               </SelectContent>
             </Select>
           </Field>
-          <Field>
-            <FieldLabel>Spend Limit ($)</FieldLabel>
-            <Input
-              type="number"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              min="1"
-              required
-            />
-          </Field>
+
+          {orgId != null && requests.length > 0 ? (
+            <>
+              <Field>
+                <FieldLabel>Fulfill a request (optional)</FieldLabel>
+                <ScrollArea className="max-h-[200px] rounded-lg border border-border">
+                  <ul className="p-2 space-y-1">
+                    {requests.map((req) => (
+                      <li key={req.id}>
+                        <label className={cn(
+                          "flex items-center justify-between gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50",
+                          selectedRequestId === req.id && "bg-muted",
+                        )}>
+                          <span className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">{req.user.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Requested {new Date(req.requestedAt).toLocaleDateString()}
+                            </span>
+                          </span>
+                          <input
+                            type="radio"
+                            name="request"
+                            checked={selectedRequestId === req.id}
+                            onChange={() => setSelectedRequestId(selectedRequestId === req.id ? null : req.id)}
+                            className="shrink-0"
+                          />
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </Field>
+              <Field>
+                <FieldLabel>Spend Limit ($)</FieldLabel>
+                <Input
+                  type="number"
+                  value={limit}
+                  onChange={(e) => setLimit(e.target.value)}
+                  min="1"
+                  required
+                />
+              </Field>
+            </>
+          ) : (
+            <Field>
+              <FieldLabel>Spend Limit ($)</FieldLabel>
+              <Input
+                type="number"
+                value={limit}
+                onChange={(e) => setLimit(e.target.value)}
+                min="1"
+                required
+              />
+            </Field>
+          )}
 
           <Collapsible className="rounded-lg border border-border">
             <CollapsibleTrigger
@@ -1077,10 +1169,12 @@ function CreateCardDialog({
           </Collapsible>
 
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={onClose} disabled={approveForRequest.isPending}>
               Cancel
             </Button>
-            <Button type="submit">Create Card</Button>
+            <Button type="submit" disabled={approveForRequest.isPending}>
+              {selectedRequestId != null ? "Issue card" : "Create Card"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

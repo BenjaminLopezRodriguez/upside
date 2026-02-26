@@ -101,6 +101,8 @@ export function DashboardView() {
   const inPersonal = mode === "personal";
   const { data: fromOrgs = [] } = api.organization.getPersonalFromOrgs.useQuery(undefined, {
     enabled: inPersonal,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   const utils = api.useUtils();
   const [requestCardOrgId, setRequestCardOrgId] = useState<number | null>(null);

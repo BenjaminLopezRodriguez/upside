@@ -7,10 +7,11 @@ export const DashboardRib = createRib({
   name: "Dashboard",
 
   interactor: (_deps: Record<string, never>) => {
-    const summary = api.dashboard.getSummary.useQuery();
-    const spendByCategory = api.dashboard.getSpendByCategory.useQuery();
-    const spendByCategoryOverTime = api.dashboard.getSpendByCategoryOverTime.useQuery();
-    const recentTransactions = api.dashboard.getRecentTransactions.useQuery();
+    const queryOpts = { staleTime: 60 * 1000, refetchOnWindowFocus: false };
+    const summary = api.dashboard.getSummary.useQuery(undefined, queryOpts);
+    const spendByCategory = api.dashboard.getSpendByCategory.useQuery(undefined, queryOpts);
+    const spendByCategoryOverTime = api.dashboard.getSpendByCategoryOverTime.useQuery(undefined, queryOpts);
+    const recentTransactions = api.dashboard.getRecentTransactions.useQuery(undefined, queryOpts);
 
     return {
       summary: summary.data,

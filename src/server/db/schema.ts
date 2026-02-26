@@ -404,6 +404,93 @@ export const organizationMembers = createTable(
   ],
 );
 
+// Notifications (in-app alerts; link optional for navigation)
+export const notifications = createTable(
+  "notification",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    organizationId: d.integer().references(() => organizations.id),
+    type: d.varchar({ length: 64 }).notNull().default("system"),
+    title: d.varchar({ length: 512 }).notNull(),
+    body: d.text(),
+    link: d.varchar({ length: 512 }),
+    readAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("notification_user_idx").on(t.userId),
+    index("notification_read_idx").on(t.readAt),
+    index("notification_created_idx").on(t.createdAt),
+  ],
+);
+
+// Conversations (1:1 or future group; no subject for now)
+export const conversations = createTable("conversation", (d) => ({
+  id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+  lastMessageAt: d.timestamp({ withTimezone: true }),
+  createdAt: d
+    .timestamp({ withTimezone: true })
+    .$defaultFn(() => new Date())
+    .notNull(),
+}));
+
+// Who is in each conversation
+export const conversationParticipants = createTable(
+  "conversation_participant",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    conversationId: d
+      .integer()
+      .notNull()
+      .references(() => conversations.id),
+    userId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    lastReadAt: d.timestamp({ withTimezone: true }),
+    joinedAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("conv_part_conv_idx").on(t.conversationId),
+    index("conv_part_user_idx").on(t.userId),
+  ],
+);
+
+// Messages within a conversation
+export const messages = createTable(
+  "message",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    conversationId: d
+      .integer()
+      .notNull()
+      .references(() => conversations.id),
+    senderId: d
+      .integer()
+      .notNull()
+      .references(() => users.id),
+    body: d.text().notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("message_conv_idx").on(t.conversationId),
+    index("message_created_idx").on(t.createdAt),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
@@ -430,11 +517,23 @@ export const usersRelations = relations(users, ({ many }) => ({
   ownedOrganizations: many(organizations),
   organizationMemberships: many(organizationMembers),
   rolesCreated: many(roles),
-  cardRequests: many(cardRequests),
+  cardRequestsRequested: many(cardRequests, {
+    relationName: "cardRequestRequester",
+  }),
+  cardRequestsProcessed: many(cardRequests, {
+    relationName: "cardRequestProcessor",
+  }),
+  notifications: many(notifications),
+  conversationParticipations: many(conversationParticipants),
+  messagesSent: many(messages),
 }));
 
 export const cardRequestsRelations = relations(cardRequests, ({ one }) => ({
-  user: one(users, { fields: [cardRequests.userId], references: [users.id] }),
+  user: one(users, {
+    fields: [cardRequests.userId],
+    references: [users.id],
+    relationName: "cardRequestRequester",
+  }),
   organization: one(organizations, {
     fields: [cardRequests.organizationId],
     references: [organizations.id],
@@ -442,6 +541,7 @@ export const cardRequestsRelations = relations(cardRequests, ({ one }) => ({
   processedByUser: one(users, {
     fields: [cardRequests.processedBy],
     references: [users.id],
+    relationName: "cardRequestProcessor",
   }),
 }));
 
@@ -518,4 +618,39 @@ export const organizationMembersRelations = relations(organizationMembers, ({ on
     references: [organizations.id],
   }),
   user: one(users, { fields: [organizationMembers.userId], references: [users.id] }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+  organization: one(organizations, {
+    fields: [notifications.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const conversationsRelations = relations(conversations, ({ many }) => ({
+  participants: many(conversationParticipants),
+  messages: many(messages),
+}));
+
+export const conversationParticipantsRelations = relations(
+  conversationParticipants,
+  ({ one }) => ({
+    conversation: one(conversations, {
+      fields: [conversationParticipants.conversationId],
+      references: [conversations.id],
+    }),
+    user: one(users, {
+      fields: [conversationParticipants.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+  sender: one(users, { fields: [messages.senderId], references: [users.id] }),
 }));

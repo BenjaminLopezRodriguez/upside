@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
-  ArrowUpDownIcon,
+  ArrowDown01Icon,
   PlusSignIcon,
   SearchIcon,
   GlobeIcon,
@@ -25,6 +25,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -37,94 +46,48 @@ interface OrgSwitcherProps {
 }
 
 export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
-  const [selectorOpen, setSelectorOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
-  const { data: myOrgs, refetch: refetchOrgs } = api.organization.listMyOrgs.useQuery();
+  const { data: myOrgs, refetch: refetchOrgs } = api.organization.listMyOrgs.useQuery(undefined, {
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   // The membership object for the currently active org
   const activeMembership = myOrgs?.find((m) => m.organization.id === activeOrgId);
   const corporateOrgs = myOrgs?.filter((m) => m.organization.type === "corporate") ?? [];
 
-  const handleOrgTabClick = () => {
-    if (mode === "org") {
-      // Already in org mode — open selector to switch
-      setSelectorOpen(true);
-      return;
-    }
-    if (corporateOrgs.length === 0) {
-      // No orgs yet — go straight to create
-      setCreateOpen(true);
-    } else if (corporateOrgs.length === 1) {
-      // Only one org — activate it directly
-      onSelect("org", corporateOrgs[0]!.organization.id);
-    } else {
-      // Multiple orgs — open selector
-      setSelectorOpen(true);
-    }
-  };
-
-  const handlePersonalTabClick = () => {
-    onSelect("personal", null);
-  };
+  const triggerLabel =
+    mode === "personal"
+      ? "Me"
+      : activeMembership
+        ? activeMembership.organization.name
+        : "Select company";
 
   return (
     <>
-      {/* Find org (personal) + Segmented toggle */}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {mode === "personal" && (
-          <>
+      {/* Single dropdown: "Who am I acting as?" */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
             <button
-              onClick={() => setJoinOpen(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              aria-label="Find an organization"
-            >
-              <HugeiconsIcon icon={SearchIcon} className="size-3.5 shrink-0" strokeWidth={2} />
-              <span className="hidden sm:inline">Find an organization</span>
-            </button>
-            <div className="min-w-0 flex-1" aria-hidden />
-          </>
-        )}
-        <div className="flex shrink-0 gap-0.5 rounded-lg bg-sidebar-accent/60 p-0.5">
-          <button
-            onClick={handlePersonalTabClick}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-              mode === "personal"
-                ? "bg-sidebar text-sidebar-foreground shadow-sm"
-                : "text-muted-foreground hover:text-sidebar-foreground",
-            )}
-            aria-label="Personal"
-          >
-            <HugeiconsIcon icon={User02Icon} className="size-3.5 shrink-0" strokeWidth={2} />
-            <span className="hidden sm:inline">Personal</span>
-          </button>
-          <button
-            onClick={handleOrgTabClick}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-              mode === "org"
-                ? "bg-sidebar text-sidebar-foreground shadow-sm"
-                : "text-muted-foreground hover:text-sidebar-foreground",
-            )}
-            aria-label="Organization"
-          >
-            <HugeiconsIcon icon={Building01Icon} className="size-3.5 shrink-0" strokeWidth={2} />
-            <span className="hidden sm:inline">Organization</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Active org chip (org mode) */}
-      {mode === "org" && activeMembership && (
-        <button
-          onClick={() => setSelectorOpen(true)}
-          className="mt-0.5 flex w-auto max-w-[13rem] shrink-0 items-center gap-1 rounded-md border border-border/60 bg-sidebar-accent/40 px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/70 sm:mt-1"
-          aria-label={`${activeMembership.organization.name}, ${activeMembership.role}. Switch organization`}
+              type="button"
+              className="flex min-w-0 max-w-56 shrink-0 items-center gap-2 rounded-lg border border-border/60 bg-sidebar-accent/40 px-2.5 py-1.5 text-left transition-colors hover:bg-sidebar-accent/70 sm:max-w-64"
+              aria-label={
+                mode === "personal"
+                  ? "Viewing as you. Switch to a company or find one."
+                  : activeMembership
+                    ? `Viewing as ${activeMembership.organization.name}. Switch context.`
+                    : "Select who you're acting as"
+              }
+            />
+          }
         >
           <div className="flex size-6 shrink-0 items-center justify-center rounded bg-primary/15 text-primary">
-            {activeMembership.organization.logoUrl ? (
+            {mode === "personal" ? (
+              <HugeiconsIcon icon={User02Icon} className="size-3.5" strokeWidth={2} />
+            ) : activeMembership?.organization.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={activeMembership.organization.logoUrl}
@@ -135,37 +98,69 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
               <HugeiconsIcon icon={Building01Icon} className="size-3.5" strokeWidth={2} />
             )}
           </div>
-          <div className="hidden min-w-0 max-w-[7rem] shrink sm:block">
-            <p className="truncate text-xs font-medium leading-tight">
-              {activeMembership.organization.name}
-            </p>
-            <p className="truncate text-[10px] capitalize leading-tight text-muted-foreground">
-              {activeMembership.role}
-            </p>
-          </div>
+          <span className="min-w-0 truncate text-xs font-medium sm:text-sm">{triggerLabel}</span>
           <HugeiconsIcon
-            icon={ArrowUpDownIcon}
+            icon={ArrowDown01Icon}
             className="size-3.5 shrink-0 text-muted-foreground"
             strokeWidth={2}
           />
-        </button>
-      )}
-
-      {/* ── Org selector dialog ─────────────────────────────────── */}
-      <OrgSelectorDialog
-        open={selectorOpen}
-        onClose={() => setSelectorOpen(false)}
-        orgs={corporateOrgs}
-        activeOrgId={activeOrgId}
-        onSelectOrg={(id) => {
-          onSelect("org", id);
-          setSelectorOpen(false);
-        }}
-        onCreateNew={() => {
-          setSelectorOpen(false);
-          setCreateOpen(true);
-        }}
-      />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-48">
+          <DropdownMenuItem
+            onClick={() => onSelect("personal", null)}
+            className="gap-2.5"
+          >
+            <HugeiconsIcon icon={User02Icon} className="size-4" strokeWidth={2} />
+            <span>Me</span>
+            {mode === "personal" && (
+              <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4 text-primary" strokeWidth={2} />
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Companies</DropdownMenuLabel>
+            {corporateOrgs.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                No companies yet. Create or find one below.
+              </p>
+            ) : (
+              corporateOrgs.map((m) => (
+                <DropdownMenuItem
+                  key={m.organization.id}
+                  onClick={() => onSelect("org", m.organization.id)}
+                  className="gap-2.5"
+                >
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    {m.organization.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={m.organization.logoUrl}
+                        alt=""
+                        className="size-full rounded-md object-contain"
+                      />
+                    ) : (
+                      <HugeiconsIcon icon={Building01Icon} className="size-3.5" strokeWidth={2} />
+                    )}
+                  </div>
+                  <span className="min-w-0 truncate">{m.organization.name}</span>
+                  {mode === "org" && activeOrgId === m.organization.id && (
+                    <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4 text-primary" strokeWidth={2} />
+                  )}
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setCreateOpen(true)} className="gap-2.5">
+            <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
+            Create company
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setJoinOpen(true)} className="gap-2.5">
+            <HugeiconsIcon icon={SearchIcon} className="size-4" strokeWidth={2} />
+            Find company
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* ── Create org dialog ────────────────────────────────────── */}
       <CreateOrgDialog
@@ -189,157 +184,6 @@ export function OrgSwitcher({ mode, activeOrgId, onSelect }: OrgSwitcherProps) {
         }}
       />
     </>
-  );
-}
-
-// ─── Org selector ────────────────────────────────────────────────────────────
-
-type OrgFilter = "owned" | "member";
-
-interface OrgSelectorDialogProps {
-  open: boolean;
-  onClose: () => void;
-  orgs: Array<{
-    id: number;
-    role: string;
-    organization: { id: number; name: string; logoUrl: string | null; type: string };
-  }>;
-  activeOrgId: number | null;
-  onSelectOrg: (id: number) => void;
-  onCreateNew: () => void;
-}
-
-function OrgSelectorDialog({
-  open,
-  onClose,
-  orgs,
-  activeOrgId,
-  onSelectOrg,
-  onCreateNew,
-}: OrgSelectorDialogProps) {
-  const [filter, setFilter] = useState<OrgFilter>("owned");
-  const [memberSearch, setMemberSearch] = useState("");
-
-  useEffect(() => {
-    if (filter === "owned") setMemberSearch("");
-  }, [filter]);
-
-  const filteredOrgs =
-    filter === "owned"
-      ? orgs.filter((m) => m.role === "owner")
-      : orgs.filter((m) => m.role !== "owner");
-
-  const displayedOrgs =
-    filter === "member" && memberSearch.trim()
-      ? filteredOrgs.filter((m) =>
-          m.organization.name.toLowerCase().includes(memberSearch.trim().toLowerCase()),
-        )
-      : filteredOrgs;
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Switch organization</DialogTitle>
-          <DialogDescription>Select an organization to switch to.</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">
-          <button
-            type="button"
-            onClick={() => setFilter("owned")}
-            className={cn(
-              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              filter === "owned"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            I own
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("member")}
-            className={cn(
-              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              filter === "member"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            I&apos;m a member
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-1 py-1">
-          {displayedOrgs.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              {filter === "owned"
-                ? "You don't own any organizations yet."
-                : filteredOrgs.length === 0
-                  ? "You're not a member of any other organizations."
-                  : "No organizations match your search."}
-            </p>
-          ) : (
-            displayedOrgs.map((m) => (
-              <button
-                key={m.organization.id}
-                onClick={() => onSelectOrg(m.organization.id)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent",
-                  m.organization.id === activeOrgId && "bg-accent",
-                )}
-              >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  {m.organization.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.organization.logoUrl}
-                      alt=""
-                      className="size-full rounded-lg object-contain"
-                    />
-                  ) : (
-                    <HugeiconsIcon icon={Building01Icon} className="size-4" strokeWidth={2} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium">{m.organization.name}</p>
-                  <p className="text-xs capitalize text-muted-foreground">{m.organization.type}</p>
-                </div>
-                {m.organization.id === activeOrgId && (
-                  <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0 text-primary" strokeWidth={2} />
-                )}
-              </button>
-            ))
-          )}
-        </div>
-        <div className="border-t pt-3">
-          {filter === "owned" ? (
-            <button
-              onClick={onCreateNew}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
-              Create new organization
-            </button>
-          ) : (
-            <div className="relative">
-              <HugeiconsIcon
-                icon={SearchIcon}
-                className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                strokeWidth={2}
-              />
-              <Input
-                placeholder="Search organizations…"
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 

@@ -76,9 +76,9 @@ export default function HirePage() {
               <EmptyMedia variant="icon">
                 <HugeiconsIcon icon={UserGroupIcon} className="size-6" />
               </EmptyMedia>
-              <EmptyTitle>Switch to an organization</EmptyTitle>
+              <EmptyTitle>Organization required</EmptyTitle>
               <EmptyDescription>
-                Select an organization from the sidebar to create and manage job roles.
+                Use the switcher above to select an organization to create and manage job roles.
               </EmptyDescription>
             </EmptyHeader>
           </CardContent>

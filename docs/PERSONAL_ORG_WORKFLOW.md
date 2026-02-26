@@ -92,12 +92,14 @@ Pages in `/company/*` require an active org. If `mode === "personal"` or `active
 
 The guard is purely a UX affordance — the API layer independently enforces ownership checks before returning or mutating any data.
 
-| Route | Guard | Condition |
+| Route | Guard | Notes |
 |---|---|---|
-| /company/members | OrgRequiredEmptyState | mode === "personal" or activeOrgId == null |
-| /company/settings | OrgRequiredEmptyState | mode === "personal" or activeOrgId == null |
-| /company/cards | OrgRequiredEmptyState | mode === "personal" or activeOrgId == null |
-| /workforce/hire | "Switch to an org" inline state | activeOrgId == null (built-in to page) |
+| /company/members | `OrgRequiredEmptyState` | mode === "personal" or activeOrgId == null |
+| /company/settings | `OrgRequiredEmptyState` | mode === "personal" or activeOrgId == null |
+| /company/cards | `OrgRequiredEmptyState` | mode === "personal" or activeOrgId == null |
+| /workforce/hire | Inline empty state | Checks `activeOrgId == null`; sidebar-gated to `isOrgOwner` |
+| /workforce/onboard | None — intentional exception | Placeholder page; no queries or mutations; shown only to owners via sidebar gate |
+| /integrations/* | None — intentional exception | Sidebar-gated to `canManageIntegrations`; data is user-scoped (no orgId required); no guard needed |
 
 ---
 
@@ -119,3 +121,22 @@ The guard is purely a UX affordance — the API layer independently enforces own
 - `activeOrgId` — `number | null`
 - `activeMembership` — full membership row or `null`
 - `isOrgOwner` — `boolean` derived from `activeMembership.role === "owner"`
+
+---
+
+## Implemented — 2026-02-25
+
+### Phase 1
+- `OrgContext` extended with `isOrgOwner`
+- `OrgRequiredEmptyState` component created (`src/components/org-required-empty-state.tsx`)
+- Route guards added to `/company/members`, `/company/settings`, `/company/cards`
+- Workforce sidebar section gated to `isOrgOwner` (was shown to all org members)
+- Dashboard Earn section subtitle made mode-aware
+- `OrgSelectorDialog` description copy updated ("manage" → "switch to")
+
+### Phase 2
+- **Member indicator** — a "Viewing as member" pill appears in the header (between the org chip and the right-side controls) when the user is in org mode as a non-owner. Implemented in `(app)/layout.tsx`.
+- **Switcher helper copy** — Personal and Organization toggle buttons now have `title` tooltip text ("Personal — just you"; "Organization — acting as [Org name]" or "Organization — act as a company") and updated `aria-label` values. Implemented in `src/components/org-switcher.tsx`.
+- **Copy pass** — Workforce/hire empty state copy updated from "Select an organization from the sidebar" → "Use the switcher above to select an organization" to match the `OrgRequiredEmptyState` pattern.
+- **Pattern check** — All org-only routes reviewed. `/workforce/onboard` and `/integrations/*` are intentional exceptions (documented in the Route guards table above). No additional guards needed.
+- **Deep-link auto-switch** — Not implemented. When a user with `deltra-mode=personal` in localStorage navigates directly to `/company/*`, they see `OrgRequiredEmptyState` and must switch manually. Auto-switching would require knowing which org to activate (ambiguous with multiple orgs) and adds layout complexity. The manual path (use the switcher) is low friction.
